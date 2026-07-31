@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  googleId  String?  @unique
+  bio       String?
+  avatarUrl String?
+  verified  Boolean  @default(false)
+
+  // Relations
+  stats       UserStats?
+  content     Content[]
+  discussions Discussion[]
+  answers     Answer[]
+  comments    Comment[]
+  ratings     Rating[]
+  votes       Vote[]
+  badges      UserBadge[]
+  streak      Streak?
+  attempts    QuestionAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserStats {
+  id        String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reputationScore Int @default(0)
+  upvotesReceived Int @default(0)
+  contentCount    Int @default(0)
+  answerCount     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id       Int    @id @default(autoincrement())
+  name     String
+  slug     String @unique
+  domain   String // UPSC, JEE, Finance
+  level    Int    // 0-3
+  path     String // UPSC/GS1/History/Ancient
+  parentId Int?
+  isLeaf   Boolean @default(false)
+
+  // Relations
+  content        Content[]
+  discussions    Discussion[]
+  dailyQuestions DailyQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  title       String
+  description String
+  type        String // video, notes
+  contentUrl  String
+  version     Int @default(1)
+
+  avgRating   Float @default(0)
+  ratingCount Int   @default(0)
+
+  // Relations
+  ratings Rating[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Discussion {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  title       String
+  description String
+  answerCount Int @default(0)
+  viewCount   Int @default(0)
+
+  // Relations
+  answers Answer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Answer {
+  id           String     @id @default(cuid())
+  discussionId String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  text        String
+  verified    Boolean @default(false)
+  verdict     String? // CORRECT, PARTIALLY_CORRECT, INCORRECT, REQUIRES_CONTEXT
+  upvoteCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comment {
+  id         String @id @default(cuid())
+  parentId   String // content, answer or discussion id
+  parentType String // content, answer, discussion
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  text        String
+  upvoteCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Rating {
+  id        String @id @default(cuid())
+  contentId String
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stars Int // 1-5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([contentId, userId])
+}
+
+model Vote {
+  id         String @id @default(cuid())
+  parentId   String // content, answer or comment id
+  parentType String // content, answer, comment
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, parentType, userId])
+}
+
+model Streak {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastActivityDate DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model Badge {
+  id         String      @id @default(cuid())
+  name       String
+  slug       String      @unique
+  userBadges UserBadge[]
+
+  createdAt DateTime @default(now())
+}
+
+model UserBadge {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId  String
+  badge    Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+model DailyQuestion {
+  id            String   @id @default(cuid())
+  question      String
+  options       String // JSON string: [{"label":"A","text":"..."}]
+  correctAnswer String
+  explanation   String?
+  type          String // UPSC, JEE, Finance
+  date          DateTime
+  categoryId    Int?
+  category      Category? @relation(fields: [categoryId], references: [id])
+
+  // Relations
+  attempts QuestionAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, date])
+}
+
+model QuestionAttempt {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       DailyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedAnswer String
+  isCorrect      Boolean
+  verdict        String? // from LLM verification
+  explanation    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, questionId])
+}

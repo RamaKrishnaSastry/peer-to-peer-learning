@@ -22,9 +22,17 @@ export interface UserStats {
   upvotesReceived: number;
   contentCount: number;
   answerCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PublicStats {
+  reputationScore: number;
+  upvotesReceived: number;
+  contentCount: number;
+  answerCount: number;
   currentStreak: number;
   longestStreak: number;
-  updatedAt: Date;
 }
 
 // Category types
@@ -88,10 +96,12 @@ export interface Answer {
 }
 
 // Comment types
+export type CommentParentType = 'content' | 'answer' | 'discussion';
+
 export interface Comment {
   id: string;
   parentId: string;
-  parentType: 'content' | 'answer';
+  parentType: CommentParentType;
   userId: string;
   text: string;
   upvoteCount: number;
@@ -119,11 +129,60 @@ export interface Streak {
   updatedAt: Date;
 }
 
+// Vote types
+export interface Vote {
+  id: string;
+  parentId: string;
+  parentType: 'content' | 'answer' | 'comment';
+  userId: string;
+  createdAt: Date;
+}
+
+// Daily question types
+export interface QuestionOption {
+  label: string;
+  text: string;
+}
+
+export interface DailyQuestion {
+  id: string;
+  question: string;
+  options: QuestionOption[];
+  correctAnswer: string;
+  explanation: string | null;
+  type: string;
+  date: Date;
+  categoryId: number | null;
+  attempted?: boolean;
+  myAttempt?: QuestionAttempt | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuestionAttempt {
+  id: string;
+  userId: string;
+  questionId: string;
+  selectedAnswer: string;
+  isCorrect: boolean;
+  verdict: string | null;
+  explanation: string | null;
+  createdAt: Date;
+}
+
 // Badge types
 export interface Badge {
   id: string;
+  name: string;
+  slug: string;
+  createdAt: Date;
+}
+
+export interface UserBadge {
+  id: string;
   userId: string;
-  badgeType: 'contributor' | 'educator' | 'learner' | 'community';
+  badgeId: string;
+  badge?: Badge;
   earnedAt: Date;
 }
 
@@ -169,6 +228,12 @@ export interface RateRequest {
 
 export interface PostCommentRequest {
   text: string;
+  parentId: string;
+  parentType: CommentParentType;
+}
+
+export interface SubmitAnswerRequest {
+  selectedAnswer: string;
 }
 
 // Pagination types
