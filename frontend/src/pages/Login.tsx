@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { GoogleButton } from "../components/GoogleButton";
+import { getErrorMessage } from "../utils/helpers";
 
 export const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,10 +20,20 @@ export const LoginPage = () => {
     try {
       await login(email, password);
       navigate("/");
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Login failed");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Login failed"));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (idToken: string) => {
+    setError("");
+    try {
+      await loginWithGoogle(idToken);
+      navigate("/");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Google sign-in failed"));
     }
   };
 
@@ -67,11 +79,19 @@ export const LoginPage = () => {
         </button>
       </form>
 
+      <div className="my-6 flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="text-gray-500 text-sm">or</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      <GoogleButton onSuccess={handleGoogleSuccess} />
+
       <p className="mt-4 text-center text-gray-600">
-        Don't have an account?{" "}
-        <a href="/signup" className="text-blue-600 hover:underline">
+        Don&apos;t have an account?{" "}
+        <Link to="/signup" className="text-blue-600 hover:underline">
           Sign up
-        </a>
+        </Link>
       </p>
     </div>
   );

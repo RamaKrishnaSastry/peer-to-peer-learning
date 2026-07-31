@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { GoogleButton } from "../components/GoogleButton";
+import { getErrorMessage } from "../utils/helpers";
 
 export const SignupPage = () => {
   const [email, setEmail] = useState("");
@@ -8,7 +10,7 @@ export const SignupPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,10 +21,20 @@ export const SignupPage = () => {
     try {
       await signup(email, username, password);
       navigate("/");
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Signup failed");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Signup failed"));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (idToken: string) => {
+    setError("");
+    try {
+      await loginWithGoogle(idToken);
+      navigate("/");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Google sign-in failed"));
     }
   };
 
@@ -80,11 +92,19 @@ export const SignupPage = () => {
         </button>
       </form>
 
+      <div className="my-6 flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="text-gray-500 text-sm">or</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      <GoogleButton onSuccess={handleGoogleSuccess} />
+
       <p className="mt-4 text-center text-gray-600">
         Already have an account?{" "}
-        <a href="/login" className="text-blue-600 hover:underline">
+        <Link to="/login" className="text-blue-600 hover:underline">
           Login
-        </a>
+        </Link>
       </p>
     </div>
   );

@@ -8,12 +8,20 @@ import {
 import api from "../utils/api";
 import { STORAGE_KEYS } from "../utils/constants";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   username: string;
   bio?: string;
   avatarUrl?: string;
+  stats?: {
+    reputationScore: number;
+    upvotesReceived: number;
+    contentCount: number;
+    answerCount: number;
+    currentStreak: number;
+    longestStreak: number;
+  };
 }
 
 interface AuthContextType {
@@ -23,6 +31,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, username: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -46,16 +55,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
+  const storeSession = (newToken: string, newUser: User) => {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
+  };
+
   const login = async (email: string, password: string) => {
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token: newToken, user: newUser } = response.data.data;
-
-      localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-
-      setToken(newToken);
-      setUser(newUser);
+      storeSession(newToken, newUser);
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -70,14 +81,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
       const { token: newToken, user: newUser } = response.data.data;
-
-      localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-
-      setToken(newToken);
-      setUser(newUser);
+      storeSession(newToken, newUser);
     } catch (error) {
       console.error("Signup failed:", error);
+      throw error;
+    }
+  };
+
+  const loginWithGoogle = async (idToken: string) => {
+    try {
+      const response = await api.post("/auth/google", { idToken });
+      const { token: newToken, user: newUser } = response.data.data;
+      storeSession(newToken, newUser);
+    } catch (error) {
+      console.error("Google login failed:", error);
       throw error;
     }
   };
@@ -98,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!token,
         login,
         signup,
+        loginWithGoogle,
         logout,
       }}
     >
