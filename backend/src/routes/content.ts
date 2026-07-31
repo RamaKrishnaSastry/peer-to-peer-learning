@@ -1,43 +1,94 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../types/express';
-import { authMiddleware } from '../middleware/auth';
-import { ApiResponse, Content, UploadContentRequest } from '../types/index';
+import { authMiddleware, optionalAuth } from '../middleware/auth';
+import prisma from '../db';
+import { toggleVote } from '../services/votes';
+import { recalculateUserStats } from '../services/engagement';
 
 const router = Router();
 
-// Mock content data
-const contents: Content[] = [];
+const getVoteCounts = async (contentIds: string[]): Promise<Map<string, number>> => {
+  if (contentIds.length === 0) return new Map();
+  const votes = await prisma.vote.groupBy({
+    by: ['parentId'],
+    where: { parentType: 'content', parentId: { in: contentIds } },
+    _count: { _all: true },
+  });
+  return new Map(votes.map((v) => [v.parentId, v._count._all]));
+};
 
-// Get all content
-router.get('/', (req: AuthRequest, res: Response) => {
+const getCommentCounts = async (contentIds: string[]): Promise<Map<string, number>> => {
+  if (contentIds.length === 0) return new Map();
+  const comments = await prisma.comment.groupBy({
+    by: ['parentId'],
+    where: { parentType: 'content', parentId: { in: contentIds } },
+    _count: { _all: true },
+  });
+  return new Map(comments.map((c) => [c.parentId, c._count._all]));
+};
+
+// List content with filters + pagination
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { categoryId, limit = 10, offset = 0, sort = 'newest' } = req.query;
+    const { categoryId, sort = 'newest' } = req.query;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const offset = parseInt(req.query.offset as string) || 0;
 
-    let filtered = [...contents];
+    const where = categoryId ? { categoryId: parseInt(categoryId as string) } : {};
 
-    if (categoryId) {
-      filtered = filtered.filter((c) => c.categoryId === parseInt(categoryId as string));
-    }
+    const orderBy =
+      sort === 'rating'
+        ? [{ avgRating: 'desc' as const }, { ratingCount: 'desc' as const }]
+        : [{ createdAt: 'desc' as const }];
 
-    if (sort === 'rating') {
-      filtered.sort((a, b) => b.avgRating - a.avgRating);
-    } else {
-      filtered.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
+    const [total, items] = await Promise.all([
+      prisma.content.count({ where }),
+      prisma.content.findMany({
+        where,
+        orderBy,
+        skip: offset,
+        take: limit,
+        include: {
+          creator: { select: { id: true, username: true } },
+          category: { select: { id: true, name: true, slug: true } },
+        },
+      }),
+    ]);
 
-    const paged = filtered.slice(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string));
+    const [voteCounts, commentCounts] = await Promise.all([
+      getVoteCounts(items.map((c) => c.id)),
+      getCommentCounts(items.map((c) => c.id)),
+    ]);
+
+    const data = items.map((c) => ({
+      id: c.id,
+      creatorId: c.creatorId,
+      creator: c.creator,
+      categoryId: c.categoryId,
+      category: c.category,
+      title: c.title,
+      description: c.description,
+      type: c.type,
+      contentUrl: c.contentUrl,
+      version: c.version,
+      avgRating: c.avgRating,
+      ratingCount: c.ratingCount,
+      commentCount: commentCounts.get(c.id) ?? 0,
+      upvoteCount: voteCounts.get(c.id) ?? 0,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
 
     return res.json({
       success: true,
-      data: paged,
-      total: filtered.length,
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
-      hasMore: parseInt(offset as string) + parseInt(limit as string) < filtered.length,
+      data,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
     });
   } catch (error) {
+    console.error('List content error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch content',
@@ -45,11 +96,26 @@ router.get('/', (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get single content
-router.get('/:id', (req: AuthRequest, res: Response) => {
+// Get single content with comments + ratings
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const content = contents.find((c) => c.id === id);
+    const [content, comments, voteCount] = await Promise.all([
+      prisma.content.findUnique({
+        where: { id },
+        include: {
+          creator: { select: { id: true, username: true } },
+          category: { select: { id: true, name: true, slug: true } },
+          ratings: { select: { id: true, userId: true, stars: true } },
+        },
+      }),
+      prisma.comment.findMany({
+        where: { parentType: 'content', parentId: id },
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, username: true } } },
+      }),
+      prisma.vote.count({ where: { parentType: 'content', parentId: id } }),
+    ]);
 
     if (!content) {
       return res.status(404).json({
@@ -58,11 +124,24 @@ router.get('/:id', (req: AuthRequest, res: Response) => {
       });
     }
 
+    let myRating: number | null = null;
+    if (req.userId) {
+      const mine = content.ratings.find((r) => r.userId === req.userId);
+      myRating = mine ? mine.stars : null;
+    }
+
     return res.json({
       success: true,
-      data: content,
+      data: {
+        ...content,
+        comments,
+        upvoteCount: voteCount,
+        myRating,
+        ratings: undefined,
+      },
     });
   } catch (error) {
+    console.error('Get content error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch content',
@@ -70,10 +149,10 @@ router.get('/:id', (req: AuthRequest, res: Response) => {
   }
 });
 
-// Upload content (requires authentication)
+// Upload content
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, type, contentUrl, categoryId }: UploadContentRequest = req.body;
+    const { title, description, type, contentUrl, categoryId } = req.body;
 
     if (!title || !description || !type || !contentUrl || !categoryId) {
       return res.status(400).json({
@@ -89,28 +168,33 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const newContent: Content = {
-      id: crypto.randomUUID(),
-      creatorId: req.userId!,
-      categoryId,
-      title,
-      description,
-      type,
-      contentUrl,
-      version: 1,
-      avgRating: 0,
-      ratingCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const category = await prisma.category.findUnique({ where: { id: parseInt(categoryId) } });
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid category',
+      });
+    }
 
-    contents.push(newContent);
+    const content = await prisma.content.create({
+      data: {
+        creatorId: req.userId!,
+        categoryId: category.id,
+        title,
+        description,
+        type,
+        contentUrl,
+      },
+    });
+
+    await recalculateUserStats(req.userId!);
 
     return res.status(201).json({
       success: true,
-      data: newContent,
+      data: content,
     });
   } catch (error) {
+    console.error('Upload content error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to upload content',
@@ -119,10 +203,10 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 });
 
 // Update content
-router.put('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const content = contents.find((c) => c.id === id);
+    const content = await prisma.content.findUnique({ where: { id } });
 
     if (!content) {
       return res.status(404).json({
@@ -140,17 +224,22 @@ router.put('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
 
     const { title, description, contentUrl } = req.body;
 
-    if (title) content.title = title;
-    if (description) content.description = description;
-    if (contentUrl) content.contentUrl = contentUrl;
-    content.updatedAt = new Date();
-    content.version += 1;
+    const updated = await prisma.content.update({
+      where: { id },
+      data: {
+        ...(title ? { title } : {}),
+        ...(description ? { description } : {}),
+        ...(contentUrl ? { contentUrl } : {}),
+        version: { increment: 1 },
+      },
+    });
 
     return res.json({
       success: true,
-      data: content,
+      data: updated,
     });
   } catch (error) {
+    console.error('Update content error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to update content',
@@ -159,35 +248,170 @@ router.put('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // Delete content
-router.delete('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const index = contents.findIndex((c) => c.id === id);
+    const content = await prisma.content.findUnique({ where: { id } });
 
-    if (index === -1) {
+    if (!content) {
       return res.status(404).json({
         success: false,
         error: 'Content not found',
       });
     }
 
-    if (contents[index].creatorId !== req.userId) {
+    if (content.creatorId !== req.userId) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to delete this content',
       });
     }
 
-    contents.splice(index, 1);
+    await prisma.content.delete({ where: { id } });
+    await recalculateUserStats(req.userId!);
 
     return res.json({
       success: true,
       message: 'Content deleted successfully',
     });
   } catch (error) {
+    console.error('Delete content error:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to delete content',
+    });
+  }
+});
+
+// Comment on content
+router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment text is required',
+      });
+    }
+
+    const content = await prisma.content.findUnique({ where: { id } });
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        parentId: id,
+        parentType: 'content',
+        userId: req.userId!,
+        text,
+      },
+      include: { user: { select: { id: true, username: true } } },
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: comment,
+    });
+  } catch (error) {
+    console.error('Comment on content error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to add comment',
+    });
+  }
+});
+
+// Rate content (1-5 stars)
+router.post('/:id/rate', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const stars = parseInt(req.body.stars);
+
+    if (!stars || stars < 1 || stars > 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rating must be between 1 and 5',
+      });
+    }
+
+    const content = await prisma.content.findUnique({ where: { id } });
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    await prisma.rating.upsert({
+      where: { contentId_userId: { contentId: id, userId: req.userId! } },
+      update: { stars },
+      create: { contentId: id, userId: req.userId!, stars },
+    });
+
+    const aggregate = await prisma.rating.aggregate({
+      where: { contentId: id },
+      _avg: { stars: true },
+      _count: { stars: true },
+    });
+
+    const updated = await prisma.content.update({
+      where: { id },
+      data: {
+        avgRating: aggregate._avg.stars ?? 0,
+        ratingCount: aggregate._count.stars,
+      },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        avgRating: updated.avgRating,
+        ratingCount: updated.ratingCount,
+        myRating: stars,
+      },
+    });
+  } catch (error) {
+    console.error('Rate content error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to rate content',
+    });
+  }
+});
+
+// Upvote content (positive-only feedback, toggles)
+router.post('/:id/upvote', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const content = await prisma.content.findUnique({ where: { id } });
+
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        error: 'Content not found',
+      });
+    }
+
+    const result = await toggleVote(req.userId!, id, 'content');
+    await recalculateUserStats(content.creatorId);
+
+    const count = await prisma.vote.count({ where: { parentType: 'content', parentId: id } });
+
+    return res.json({
+      success: true,
+      data: { voted: result.voted, count },
+    });
+  } catch (error) {
+    console.error('Upvote content error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to upvote content',
     });
   }
 });
