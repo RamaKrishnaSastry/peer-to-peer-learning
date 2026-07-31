@@ -4,13 +4,36 @@ import { LLMVerificationResponse, LLMVerdict } from '../types/index';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
+const callClaude = async (prompt: string, maxTokens: number): Promise<string> => {
+  const response = await axios.post(
+    CLAUDE_API_URL,
+    {
+      model: 'claude-3-haiku-20240307',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+    }
+  );
+  return response.data.content[0].text;
+};
+
+const parseVerdict = (value: string): LLMVerdict => {
+  const valid: LLMVerdict[] = ['CORRECT', 'PARTIALLY_CORRECT', 'INCORRECT', 'REQUIRES_CONTEXT'];
+  return valid.includes(value as LLMVerdict) ? (value as LLMVerdict) : 'REQUIRES_CONTEXT';
+};
+
 export const verifyAnswerWithClaude = async (
   question: string,
   answer: string,
   category: string
 ): Promise<LLMVerificationResponse> => {
-  try {
-    const prompt = `
+  const prompt = `
 You are an expert fact-checker for educational content. Your job is to verify if an answer is correct.
 
 Question (${category}): ${question}
@@ -27,36 +50,15 @@ Format your response as JSON:
   "confidence": 85,
   "explanation": "..."
 }
-    `;
+  `;
 
-    const response = await axios.post(
-      CLAUDE_API_URL,
-      {
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 500,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-      }
-    );
-
-    const content = response.data.content[0].text;
+  try {
+    const content = await callClaude(prompt, 500);
     const parsed = JSON.parse(content);
-
     return {
-      verdict: parsed.verdict as LLMVerdict,
-      confidence: parsed.confidence,
-      explanation: parsed.explanation,
+      verdict: parseVerdict(parsed.verdict),
+      confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 0)),
+      explanation: parsed.explanation || '',
     };
   } catch (error) {
     console.error('Claude API error:', error);
@@ -65,9 +67,8 @@ Format your response as JSON:
 };
 
 export const generateDailyQuestion = async (category: string): Promise<string> => {
-  try {
-    const prompt = `
-Generate a relevant ${category} exam question for daily practice. 
+  const prompt = `
+Generate a relevant ${category} exam question for daily practice.
 The question should be:
 - Multiple choice with 4 options (A, B, C, D)
 - Appropriately difficult
@@ -81,32 +82,30 @@ C) [option c]
 D) [option d]
 Correct Answer: [A/B/C/D]
 Explanation: [brief explanation]
-    `;
+  `;
 
-    const response = await axios.post(
-      CLAUDE_API_URL,
-      {
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-      }
-    );
-
-    return response.data.content[0].text;
+  try {
+    return await callClaude(prompt, 1000);
   } catch (error) {
     console.error('Error generating daily question:', error);
     throw new Error('Failed to generate daily question');
   }
+};
+
+export const verifyAnswer = async (
+  question: string,
+  answer: string,
+  category: string,
+  correctAnswer?: string
+): Promise<LLMVerificationResponse> => {
+  if (!CLAUDE_API_KEY) {
+    // Deterministic offline fallback so the core flow works without the API key.
+    const isExact = correctAnswer !== undefined && answer.toUpperCase() === correctAnswer.toUpperCase();
+    return {
+      verdict: correctAnswer !== undefined ? (isExact ? 'CORRECT' : 'INCORRECT') : 'REQUIRES_CONTEXT',
+      confidence: correctAnswer !== undefined ? 100 : 0,
+      explanation: '',
+    };
+  }
+  return verifyAnswerWithClaude(question, answer, category);
 };
