@@ -46,7 +46,7 @@ This platform addresses a specific problem: students spend excessive time findin
 - PostgreSQL 14+ as primary database
 
 **External Services:**
-- Claude API (answer verification)
+- Gemini API (free-tier answer verification)
 - YouTube API (video embedding)
 - Cloudinary (file storage - Phase 2+)
 
@@ -138,7 +138,7 @@ DATABASE_URL="file:./dev.db"
 # DATABASE_URL=postgresql://user:password@localhost:5432/learning_platform
 
 JWT_SECRET=your-secret-key
-CLAUDE_API_KEY=sk-ant-xxxxx
+GEMINI_API_KEY=your_gemini_api_key
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 NODE_ENV=development
 PORT=3001
@@ -159,9 +159,10 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 > `frontend/.env`. When unset, the Google button is hidden and the endpoint
 > returns 503.
 >
-> **Claude verification:** if `CLAUDE_API_KEY` is empty, answer verification
-> falls back to deterministic correct/incorrect checks so the core flow works
-> without the API key.
+> **Gemini verification:** answer verification uses the free tier of the
+> Gemini API (`gemini-flash-lite-latest`, set `GEMINI_MODEL` to override). If
+> `GEMINI_API_KEY` is empty, verification falls back to deterministic
+> correct/incorrect checks so the core flow works without the API key.
 
 ## Database Setup
 
@@ -230,7 +231,7 @@ npx prisma migrate reset
 
 3. **Positive-Only Feedback:** No public downvotes. Only upvotes, helpful marks, and constructive comments to maintain psychological safety in the learning community.
 
-4. **AI Verification in Phase 1:** Immediate Claude API integration for MCQ verification to build user trust from day one.
+4. **AI Verification in Phase 1:** Immediate Gemini API (free tier) integration for MCQ verification to build user trust from day one.
 
 5. **4-Level Category Hierarchy:** Matches official exam curricula structure (Domain → Subject → Topic → Sub-topic) for easy navigation.
 
@@ -408,9 +409,9 @@ npm run test:coverage
 - Check DATABASE_URL in .env
 - Ensure database exists
 
-**Claude API Errors:**
-- Verify CLAUDE_API_KEY is valid
-- Check API rate limits
+**Gemini API Errors:**
+- Verify GEMINI_API_KEY is valid
+- Check free-tier rate limits (may return 429; verification falls back on failure)
 - Review error logs
 
 **Frontend Not Connecting:**
