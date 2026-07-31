@@ -1,5 +1,7 @@
 import { Router, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { AuthRequest } from '../types/express';
 import {
   validateEmail,
@@ -7,21 +9,43 @@ import {
   hashPassword,
   comparePasswords,
 } from '../utils/helpers';
-import { SignupRequest, LoginRequest, ApiResponse, AuthResponse } from '../types/index';
+import prisma from '../db';
+import { getStatsWithStreak } from '../services/engagement';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
+const JWT_EXPIRY = (process.env.JWT_EXPIRY || '7d') as jwt.SignOptions['expiresIn'];
 
-// Mock database (replace with Prisma)
-const users: any[] = [];
+const signToken = (userId: string): string =>
+  jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+
+const toSafeUser = (user: any) => {
+  const { password, ...safe } = user;
+  return safe;
+};
+
+const generateUniqueUsername = async (email: string): Promise<string> => {
+  const base =
+    email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 20) || 'user';
+
+  let username = base;
+  let suffix = 1;
+  while (await prisma.user.findUnique({ where: { username } })) {
+    username = `${base}${suffix++}`;
+  }
+  return username;
+};
 
 // Signup
 router.post('/signup', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, username, password }: SignupRequest = req.body;
+    const { email, username, password } = req.body;
 
-    // Validation
     if (!email || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -43,48 +67,37 @@ router.post('/signup', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user exists
-    const existingUser = users.find((u) => u.email === email);
-    if (existingUser) {
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] },
+    });
+    if (existing) {
       return res.status(400).json({
         success: false,
-        error: 'User already exists',
+        error: 'Email or username already registered',
       });
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
-    const newUser = {
-      id: crypto.randomUUID(),
-      email,
-      username,
-      password: hashedPassword,
-      bio: null,
-      avatarUrl: null,
-      verified: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    users.push(newUser);
-
-    // Generate token
-    const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRY,
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { email, username, password: hashedPassword },
+      });
+      await tx.userStats.create({ data: { userId: created.id } });
+      return created;
     });
 
-    const response: ApiResponse<AuthResponse> = {
+    const token = signToken(user.id);
+
+    return res.status(201).json({
       success: true,
       data: {
         token,
-        user: { ...newUser, password: undefined },
+        user: toSafeUser(user),
       },
-    };
-
-    return res.status(201).json(response);
+    });
   } catch (error) {
+    console.error('Signup error:', error);
     return res.status(500).json({
       success: false,
       error: 'Server error during signup',
@@ -95,7 +108,7 @@ router.post('/signup', async (req: AuthRequest, res: Response) => {
 // Login
 router.post('/login', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password }: LoginRequest = req.body;
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -104,7 +117,9 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const user = users.find((u) => u.email === email);
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username: email }] },
+    });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -120,20 +135,17 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRY,
-    });
+    const token = signToken(user.id);
 
-    const response: ApiResponse<AuthResponse> = {
+    return res.json({
       success: true,
       data: {
         token,
-        user: { ...user, password: undefined },
+        user: toSafeUser(user),
       },
-    };
-
-    return res.json(response);
+    });
   } catch (error) {
+    console.error('Login error:', error);
     return res.status(500).json({
       success: false,
       error: 'Server error during login',
@@ -141,17 +153,97 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get current user
-router.get('/me', (req: AuthRequest, res: Response) => {
+// Google OAuth (register or login with a Google ID token)
+router.post('/google', async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.userId) {
-      return res.status(401).json({
+    const { idToken } = req.body;
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+    if (!idToken) {
+      return res.status(400).json({
         success: false,
-        error: 'Not authenticated',
+        error: 'idToken is required',
       });
     }
 
-    const user = users.find((u) => u.id === req.userId);
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(503).json({
+        success: false,
+        error: 'Google sign-in is not configured on the server',
+      });
+    }
+
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email || !payload.email_verified || !payload.sub) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid Google token',
+      });
+    }
+
+    const googleEmail = payload.email;
+    const googleSub = payload.sub;
+    const googlePicture = payload.picture ?? null;
+
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ googleId: googleSub }, { email: googleEmail }] },
+    });
+
+    if (!user) {
+      const username = await generateUniqueUsername(googleEmail);
+      const hashedPassword = await hashPassword(crypto.randomBytes(32).toString('hex'));
+
+      user = await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: googleEmail,
+            username,
+            password: hashedPassword,
+            googleId: googleSub,
+            avatarUrl: googlePicture,
+            verified: true,
+          },
+        });
+        await tx.userStats.create({ data: { userId: created.id } });
+        return created;
+      });
+    } else if (!user.googleId) {
+      // Existing email/password account signing in with Google for the first time
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: googleSub,
+          verified: true,
+          ...(user.avatarUrl ? {} : { avatarUrl: googlePicture }),
+        },
+      });
+    }
+
+    const token = signToken(user.id);
+
+    return res.json({
+      success: true,
+      data: {
+        token,
+        user: toSafeUser(user),
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid Google token',
+    });
+  }
+});
+
+// Get current user with stats
+router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -159,11 +251,17 @@ router.get('/me', (req: AuthRequest, res: Response) => {
       });
     }
 
+    const stats = await getStatsWithStreak(user.id);
+
     return res.json({
       success: true,
-      data: { ...user, password: undefined },
+      data: {
+        ...toSafeUser(user),
+        stats,
+      },
     });
   } catch (error) {
+    console.error('Me error:', error);
     return res.status(500).json({
       success: false,
       error: 'Server error',
