@@ -92,8 +92,11 @@ frontend/
 
 ### Prerequisites
 - Node.js 18 or higher
-- PostgreSQL 14 or higher
 - Git
+
+> No local database server is required for development. The backend runs on
+> SQLite (a local file) by default and can be switched to PostgreSQL for
+> production with a one-line change to `DATABASE_URL` and the Prisma provider.
 
 ### Installation
 
@@ -108,8 +111,9 @@ cd learning-platform
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your database credentials
+# Edit .env with your credentials (SQLite works out of the box)
 npx prisma migrate dev
+npm run db:seed
 npm run dev
 ```
 
@@ -121,32 +125,52 @@ cp .env.example .env
 npm run dev
 ```
 
-Backend runs on `http://localhost:3000`
-Frontend runs on `http://localhost:5173`
+Backend runs on `http://localhost:3001` (health check: `/health`)
+Frontend runs on `http://localhost:3000` (dev server proxies `/api` to the backend)
 
 ### Environment Variables
 
 **Backend (.env):**
 ```
-DATABASE_URL=postgresql://user:password@localhost:5432/learning_platform
+# SQLite (default, no server needed)
+DATABASE_URL="file:./dev.db"
+# Production (PostgreSQL):
+# DATABASE_URL=postgresql://user:password@localhost:5432/learning_platform
+
 JWT_SECRET=your-secret-key
 CLAUDE_API_KEY=sk-ant-xxxxx
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 NODE_ENV=development
-PORT=3000
+PORT=3001
 FRONTEND_URL=http://localhost:5173
 ```
 
 **Frontend (.env):**
 ```
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=http://localhost:3001/api
 VITE_APP_NAME=Learning Platform
+VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 ```
+
+> **Google OAuth:** to enable "Sign in with Google" on the Login and Signup
+> pages, create an OAuth 2.0 Client ID in the
+> [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+> then set `GOOGLE_CLIENT_ID` in `backend/.env` and `VITE_GOOGLE_CLIENT_ID` in
+> `frontend/.env`. When unset, the Google button is hidden and the endpoint
+> returns 503.
+>
+> **Claude verification:** if `CLAUDE_API_KEY` is empty, answer verification
+> falls back to deterministic correct/incorrect checks so the core flow works
+> without the API key.
 
 ## Database Setup
 
 ```bash
-# Generate and apply migrations
+# Apply migrations
 npx prisma migrate dev
+
+# Seed categories, daily questions, and badges
+npm run db:seed
 
 # View database in browser
 npx prisma studio
@@ -160,30 +184,38 @@ npx prisma migrate reset
 ### Authentication
 - `POST /api/auth/signup` - Register new user
 - `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
+- `POST /api/auth/google` - Google OAuth login/register (verify ID token)
+- `GET /api/auth/me` - Get current user with stats
 
 ### Categories
 - `GET /api/categories` - List root categories
-- `GET /api/categories/:slug` - Get specific category
-- `GET /api/categories/:id/children` - Get subcategories
+- `GET /api/categories/:slug` - Get specific category with children
+- `GET /api/categories/:id/tree` - Get full category tree
+- `GET /api/categories/:id/breadcrumb` - Get category breadcrumb
 
 ### Content
-- `POST /api/content/upload` - Upload study material
-- `GET /api/content/:id` - View content
-- `POST /api/content/:id/vote` - Upvote content
+- `GET /api/content` - List content (filter by `categoryId`, sort by `newest`/`rating`)
+- `GET /api/content/:id` - View content with comments
+- `POST /api/content` - Upload study material
+- `PUT /api/content/:id` - Update content (owner only)
+- `DELETE /api/content/:id` - Delete content (owner only)
 - `POST /api/content/:id/comment` - Add comment
+- `POST /api/content/:id/rate` - Rate content (1-5 stars)
+- `POST /api/content/:id/upvote` - Upvote content (positive-only, toggles)
 
 ### Daily Questions
-- `GET /api/daily-questions/today/:type` - Get today's question
-- `POST /api/daily-questions/:id/submit` - Submit answer
-- `GET /api/daily-questions/:id/leaderboard` - View rankings
-- `GET /api/daily-questions/history/:type` - View past questions
+- `GET /api/daily-questions/today/:type` - Get today's question (UPSC/JEE/Finance)
+- `GET /api/daily-questions/history/:type` - View past questions with attempts
+- `POST /api/daily-questions/:id/submit` - Submit answer (updates streak)
 
 ### Discussions
 - `POST /api/discussions` - Create discussion
-- `GET /api/discussions/:id` - View discussion
+- `GET /api/discussions` - List discussions
+- `GET /api/discussions/:id` - View discussion with answers
 - `POST /api/discussions/:id/answer` - Add answer
+- `POST /api/discussions/:id/comment` - Comment on a discussion
 - `POST /api/answers/:id/upvote` - Upvote answer
+- `POST /api/answers/:id/comment` - Comment on an answer
 
 ### Users
 - `GET /api/users/:username/profile` - User profile
