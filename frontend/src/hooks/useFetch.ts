@@ -17,14 +17,14 @@ export const useFetch = <T,>(
 };
 
 export const usePost = () => {
-  return async <T,>(url: string, data: any): Promise<T> => {
+  return async <T,>(url: string, data: unknown): Promise<T> => {
     const response = await api.post(url, data);
     return response.data.data;
   };
 };
 
 export const usePut = () => {
-  return async <T,>(url: string, data: any): Promise<T> => {
+  return async <T,>(url: string, data: unknown): Promise<T> => {
     const response = await api.put(url, data);
     return response.data.data;
   };

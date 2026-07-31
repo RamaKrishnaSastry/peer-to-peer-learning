@@ -14,37 +14,36 @@ export const Navbar = () => {
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex items-center">
+          <div className="flex items-center space-x-6">
             <Link to="/" className="text-2xl font-bold text-blue-600">
               Peer Learning
+            </Link>
+            <Link to="/daily" className="text-gray-700 hover:text-blue-600">
+              Daily
+            </Link>
+            <Link to="/discussions" className="text-gray-700 hover:text-blue-600">
+              Discussions
+            </Link>
+            <Link to="/content" className="text-gray-700 hover:text-blue-600">
+              Content
+            </Link>
+            <Link to="/categories" className="text-gray-700 hover:text-blue-600">
+              Browse
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
-            <Link
-              to="/categories"
-              className="text-gray-700 hover:text-blue-600"
-            >
-              Browse
-            </Link>
-
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/upload"
-                  className="text-gray-700 hover:text-blue-600"
-                >
-                  Upload
+                <Link to="/profile" className="text-gray-700 hover:text-blue-600">
+                  {user?.username}
                 </Link>
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-700">{user?.username}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Logout
-                  </button>
-                </div>
+                <button
+                  onClick={handleLogout}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Logout
+                </button>
               </>
             ) : (
               <>

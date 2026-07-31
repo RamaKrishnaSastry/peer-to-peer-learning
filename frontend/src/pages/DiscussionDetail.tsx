@@ -1,0 +1,181 @@
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useFetch } from "../hooks/useFetch";
+import api from "../utils/api";
+import { API_ENDPOINTS } from "../utils/constants";
+import { useAuth } from "../contexts/AuthContext";
+import { Loading } from "../components/Loading";
+import { getTimeAgo, getErrorMessage } from "../utils/helpers";
+
+interface Answer {
+  id: string;
+  text: string;
+  upvoteCount: number;
+  verified: boolean;
+  verdict: string | null;
+  createdAt: string;
+  creator: { id: string; username: string };
+}
+
+interface Discussion {
+  id: string;
+  title: string;
+  description: string;
+  answerCount: number;
+  viewCount: number;
+  createdAt: string;
+  creator: { id: string; username: string };
+  category: { id: number; name: string };
+  answers: Answer[];
+}
+
+export const DiscussionDetailPage = () => {
+  const { id = "" } = useParams();
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: discussion, isLoading } = useFetch<Discussion>(
+    ["discussion", id],
+    API_ENDPOINTS.DISCUSSIONS.GET(id!),
+  );
+
+  const handlePostAnswer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post(API_ENDPOINTS.DISCUSSIONS.POST_ANSWER(id!), { text });
+      setText("");
+      queryClient.invalidateQueries({ queryKey: ["discussion", id] });
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to post answer"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpvote = async (answerId: string) => {
+    try {
+      await api.post(API_ENDPOINTS.ANSWERS.UPVOTE(answerId));
+      queryClient.invalidateQueries({ queryKey: ["discussion", id] });
+    } catch (err) {
+      console.error("Upvote failed:", err);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto py-8">
+      <Link to="/discussions" className="text-blue-600 hover:underline mb-4 inline-block">
+        ← Back to discussions
+      </Link>
+
+      <Loading isLoading={isLoading}>
+        {discussion ? (
+          <>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+              <h1 className="text-2xl font-bold mb-2">{discussion.title}</h1>
+              <div className="text-sm text-gray-500 mb-4">
+                by{" "}
+                <Link
+                  to={`/users/${discussion.creator.username}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {discussion.creator.username}
+                </Link>{" "}
+                · {getTimeAgo(discussion.createdAt)} · {discussion.viewCount} views
+              </div>
+              <p className="text-gray-700 whitespace-pre-wrap">{discussion.description}</p>
+            </div>
+
+            <h2 className="text-xl font-bold mb-4">
+              {discussion.answers.length} Answers
+            </h2>
+
+            <div className="space-y-4 mb-8">
+              {discussion.answers.map((answer) => (
+                <div
+                  key={answer.id}
+                  className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => handleUpvote(answer.id)}
+                      className="flex flex-col items-center px-3 py-2 border border-gray-300 rounded-lg hover:border-blue-500"
+                    >
+                      <span className="text-lg">👍</span>
+                      <span className="font-bold text-sm">{answer.upvoteCount}</span>
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-gray-800 whitespace-pre-wrap mb-2">{answer.text}</p>
+                      {answer.verified && (
+                        <p className="text-sm text-green-600 font-semibold mb-2">
+                          ✓ AI verified: {answer.verdict}
+                        </p>
+                      )}
+                      <div className="text-sm text-gray-500">
+                        by{" "}
+                        <Link
+                          to={`/users/${answer.creator.username}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {answer.creator.username}
+                        </Link>{" "}
+                        · {getTimeAgo(answer.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {discussion.answers.length === 0 && (
+                <p className="text-center text-gray-500 py-6">
+                  No answers yet. Be the first to help!
+                </p>
+              )}
+            </div>
+
+            {isAuthenticated ? (
+              <form
+                onSubmit={handlePostAnswer}
+                className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
+              >
+                <h3 className="text-lg font-bold mb-4">Post Your Answer</h3>
+                {error && (
+                  <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>
+                )}
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  required
+                  rows={4}
+                  className="w-full border border-gray-300 rounded px-4 py-2 mb-4"
+                  placeholder="Share your explanation..."
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  {submitting ? "Posting..." : "Post Answer"}
+                </button>
+              </form>
+            ) : (
+              <p className="text-center text-gray-600">
+                <Link to="/login" className="text-blue-600 hover:underline">
+                  Login
+                </Link>{" "}
+                to post an answer
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-center text-gray-600 py-10">Discussion not found.</p>
+        )}
+      </Loading>
+    </div>
+  );
+};

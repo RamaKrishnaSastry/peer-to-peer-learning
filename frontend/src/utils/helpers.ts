@@ -1,3 +1,5 @@
+import { AxiosError } from "axios";
+
 export const formatDate = (date: Date | string): string => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -40,4 +42,14 @@ export const truncateText = (text: string, length: number): string => {
 
 export const capitalizeFirstLetter = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+export const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof AxiosError) {
+    return error.response?.data?.error || error.message || fallback;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
 };

@@ -6,6 +6,12 @@ import { Home } from "./pages/Home";
 import { LoginPage } from "./pages/Login";
 import { SignupPage } from "./pages/Signup";
 import { CategoriesPage } from "./pages/Categories";
+import { DailyQuestionPage } from "./pages/DailyQuestion";
+import { DiscussionsPage } from "./pages/Discussions";
+import { DiscussionDetailPage } from "./pages/DiscussionDetail";
+import { ContentPage } from "./pages/Content";
+import { ContentDetailPage } from "./pages/ContentDetail";
+import { ProfilePage } from "./pages/Profile";
 
 function App() {
   return (
@@ -19,8 +25,12 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
-
-            {/* Add more routes here */}
+            <Route path="/daily" element={<DailyQuestionPage />} />
+            <Route path="/discussions" element={<DiscussionsPage />} />
+            <Route path="/discussions/:id" element={<DiscussionDetailPage />} />
+            <Route path="/content" element={<ContentPage />} />
+            <Route path="/content/:id" element={<ContentDetailPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </main>
 
