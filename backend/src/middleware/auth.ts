@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types/express';
 
@@ -8,52 +8,84 @@ export const authMiddleware = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'No token provided',
       });
+      return;
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     req.userId = decoded.userId;
     req.token = token;
     next();
   } catch (error) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: 'Invalid token',
     });
   }
 };
 
+// Authenticate when a token is present, but allow anonymous access otherwise.
+export const optionalAuth = (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): void => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    next();
+    return;
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    req.userId = decoded.userId;
+    req.token = token;
+  } catch (error) {
+    // Invalid token on a public route: treat as anonymous.
+  }
+  next();
+};
+
 export const errorHandler = (
   error: any,
-  req: any,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   console.error('Error:', error);
 
   if (error.name === 'ValidationError') {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: error.message,
     });
+    return;
   }
 
   if (error.name === 'UnauthorizedError') {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: 'Unauthorized',
     });
+    return;
   }
 
-  return res.status(500).json({
+  if (error.code === 'P2025') {
+    res.status(404).json({
+      success: false,
+      error: 'Resource not found',
+    });
+    return;
+  }
+
+  res.status(500).json({
     success: false,
     error: 'Internal server error',
   });
