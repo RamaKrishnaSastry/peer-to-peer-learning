@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from "../utils/constants";
 import { getErrorMessage, getTimeAgo } from "../utils/helpers";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
+import { ReportButton } from "../components/ReportButton";
 
 interface Answer {
   id: string;
@@ -123,6 +124,15 @@ export const DiscussionDetailPage = () => {
                   </button>
                 )}
               </div>
+              <div className="flex justify-end -mt-2">
+                <ReportButton
+                  targetType="discussion"
+                  targetId={discussion.id}
+                  onSubmit={async (payload) => {
+                    await api.post(API_ENDPOINTS.REPORTS, payload);
+                  }}
+                />
+              </div>
               {statusError && (
                 <div className="bg-red-100 text-red-700 p-3 rounded mt-3">
                   {statusError}
@@ -192,6 +202,16 @@ export const DiscussionDetailPage = () => {
                           {answer.creator.username}
                         </Link>{" "}
                         · {getTimeAgo(answer.createdAt)} · 💬 {answer.commentCount}
+                        <span className="ml-2">
+                          <ReportButton
+                            targetType="answer"
+                            targetId={answer.id}
+                            onSubmit={async (payload) => {
+                              await api.post(API_ENDPOINTS.REPORTS, payload);
+                            }}
+                            className="text-xs"
+                          />
+                        </span>
                       </div>
                     </div>
                   </div>

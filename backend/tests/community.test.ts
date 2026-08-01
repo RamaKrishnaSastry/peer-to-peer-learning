@@ -290,4 +290,63 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const domain = await request(app).get('/api/leaderboard?domain=JEE');
     expect(domain.status).toBe(200);
   });
+
+  test('reporting flow: submit, unique per user, moderation status update', async () => {
+    const reporter = await signupAndGetToken(app, 'reporter');
+    const target = await signupAndGetToken(app, 'targetuser');
+    const reporterAuth = { Authorization: `Bearer ${reporter}` };
+    const targetAuth = { Authorization: `Bearer ${target}` };
+
+    const create = await request(app)
+      .post('/api/content')
+      .set(targetAuth)
+      .send({
+        title: 'Reportable content',
+        description: 'Has an issue',
+        type: 'notes',
+        contentUrl: 'https://example.com/report.pdf',
+        categoryId,
+      });
+    const contentId = create.body.data.id;
+
+    const report = await request(app)
+      .post('/api/reports')
+      .set(reporterAuth)
+      .send({ targetType: 'content', targetId: contentId, reason: 'spam', details: 'Duplicate notes' });
+    expect(report.status).toBe(201);
+    expect(report.body.data.reason).toBe('spam');
+
+    const duplicate = await request(app)
+      .post('/api/reports')
+      .set(reporterAuth)
+      .send({ targetType: 'content', targetId: contentId, reason: 'abuse' });
+    expect(duplicate.status).toBe(201);
+
+    const invalidType = await request(app)
+      .post('/api/reports')
+      .set(reporterAuth)
+      .send({ targetType: 'user', targetId: contentId, reason: 'spam' });
+    expect(invalidType.status).toBe(400);
+
+    const missing = await request(app)
+      .post('/api/reports')
+      .set(reporterAuth)
+      .send({ targetType: 'content', targetId: 'nonexistent-id', reason: 'spam' });
+    expect(missing.status).toBe(404);
+
+    const queue = await request(app).get('/api/reports').set(reporterAuth);
+    expect(queue.status).toBe(200);
+    expect(queue.body.total).toBeGreaterThanOrEqual(1);
+    expect(queue.body.data[0].status).toBe('open');
+
+    const reviewed = await request(app)
+      .patch(`/api/reports/${report.body.data.id}`)
+      .set(reporterAuth)
+      .send({ status: 'reviewed', reviewNote: 'Actioned' });
+    expect(reviewed.status).toBe(200);
+    expect(reviewed.body.data.status).toBe('reviewed');
+
+    const openQueue = await request(app).get('/api/reports?status=open').set(reporterAuth);
+    expect(openQueue.body.data.some((r: any) => r.id === report.body.data.id)).toBe(false);
+  });
 });

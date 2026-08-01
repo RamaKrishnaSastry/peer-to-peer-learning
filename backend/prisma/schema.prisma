@@ -30,6 +30,7 @@ model User {
   streak      Streak?
   attempts    QuestionAttempt[]
   notifications Notification[]
+  reports     Report[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -50,6 +51,24 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType String   // content, discussion, answer, comment
+  targetId   String
+  reason     String   // spam, abuse, misinformation, other
+  details    String?
+  status     String   @default("open") // open, reviewed, dismissed
+  reviewNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
 }
 
 model UserStats {

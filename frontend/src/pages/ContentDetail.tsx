@@ -6,6 +6,7 @@ import api from "../utils/api";
 import { API_ENDPOINTS } from "../utils/constants";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
+import { ReportButton } from "../components/ReportButton";
 import { extractYouTubeId, getErrorMessage, getTimeAgo } from "../utils/helpers";
 
 interface Comment {
@@ -94,6 +95,15 @@ export const ContentDetailPage = () => {
     }
   };
 
+  const handleReport = async (payload: {
+    targetType: string;
+    targetId: string;
+    reason: string;
+    details?: string;
+  }) => {
+    await api.post(API_ENDPOINTS.REPORTS, payload);
+  };
+
   const videoId = content?.type === "video" ? extractYouTubeId(content.contentUrl) : null;
 
   return (
@@ -128,7 +138,13 @@ export const ContentDetailPage = () => {
                   <span className="font-bold text-sm">{content.upvoteCount}</span>
                 </button>
               </div>
-
+              <div className="flex justify-end -mt-2">
+                <ReportButton
+                  targetType="content"
+                  targetId={content.id}
+                  onSubmit={handleReport}
+                />
+              </div>
               <p className="text-gray-700 whitespace-pre-wrap mb-4">{content.description}</p>
 
               <a
@@ -207,6 +223,14 @@ export const ContentDetailPage = () => {
                           {comment.user.username}
                         </Link>{" "}
                         · {getTimeAgo(comment.createdAt)}
+                        <span className="ml-2">
+                          <ReportButton
+                            targetType="comment"
+                            targetId={comment.id}
+                            onSubmit={handleReport}
+                            className="text-xs"
+                          />
+                        </span>
                       </div>
                     </div>
                   </div>

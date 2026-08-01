@@ -11,7 +11,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
 - [x] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak, domain filter) + page with tabs and medals.
 - [ ] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically (swap to R2/S3 in prod).
-- [ ] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
+- [x] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
 - [ ] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
 - [ ] **#9 Follow + bookmarks** — `Follow`/`Bookmark` models, follow button on profiles, bookmark buttons, bookmarks page.
 - [ ] **#10 Subjective/Mains-style questions** — open-ended daily question type + AI essay grading.
