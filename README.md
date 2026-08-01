@@ -9,11 +9,12 @@ This platform addresses a specific problem: students spend excessive time findin
 ## Core Features
 
 ### Phase 1 (Weeks 1-4)
-- User authentication (email OTP + Google OAuth)
+- User authentication (password login + email OTP registration + Google OAuth)
+- Custom usernames with public profiles
 - Curriculum hierarchy (4-level categorization)
 - Daily questions with immediate AI verification
-- Peer comments and discussion threads
-- User profiles with statistics
+- Peer comments and discussion threads (starters can end a thread)
+- User profiles with statistics and badges
 - Positive-only feedback system (upvotes only, no downvotes)
 - Streak tracking for daily engagement
 
@@ -184,25 +185,29 @@ npx prisma migrate reset
 
 ### Authentication
 - `POST /api/auth/otp/request` - Request a 6-digit email OTP (dev: code logged to console + returned as `devOtp`)
-- `POST /api/auth/otp/verify` - Verify the code; logs in or creates the account, returns a JWT
-- `POST /api/auth/google` - Google OAuth login/register (verify ID token)
+- `POST /api/auth/otp/verify` - Verify the code to create an account (accepts `password` ≥8 chars and optional `username`), returns a JWT
+- `POST /api/auth/login` - Password login by email or username
+- `POST /api/auth/google` - Google OAuth login (requires a registered account; links `googleId`)
 - `GET /api/auth/me` - Get current user with stats
 
 ### Categories
 - `GET /api/categories` - List root categories
+- `GET /api/categories/all` - List all categories flattened (for cascading selects)
 - `GET /api/categories/:slug` - Get specific category with children
 - `GET /api/categories/:id/tree` - Get full category tree
 - `GET /api/categories/:id/breadcrumb` - Get category breadcrumb
 
 ### Content
 - `GET /api/content` - List content (filter by `categoryId`, sort by `newest`/`rating`)
-- `GET /api/content/:id` - View content with comments
+- `GET /api/content/:id` - View content with comments (includes comment `upvoteCount`/`myVote`)
 - `POST /api/content` - Upload study material
 - `PUT /api/content/:id` - Update content (owner only)
 - `DELETE /api/content/:id` - Delete content (owner only)
 - `POST /api/content/:id/comment` - Add comment
 - `POST /api/content/:id/rate` - Rate content (1-5 stars)
 - `POST /api/content/:id/upvote` - Upvote content (positive-only, toggles)
+- `POST /api/comments/:id/upvote` - Upvote a comment (toggles)
+- `DELETE /api/comments/:id` - Delete own comment
 
 ### Daily Questions
 - `GET /api/daily-questions/today/:type` - Get today's question (UPSC/JEE/Finance)
@@ -211,15 +216,19 @@ npx prisma migrate reset
 
 ### Discussions
 - `POST /api/discussions` - Create discussion
-- `GET /api/discussions` - List discussions
-- `GET /api/discussions/:id` - View discussion with answers
-- `POST /api/discussions/:id/answer` - Add answer
+- `GET /api/discussions` - List discussions (filter by `categoryId`, sort by `newest`/`top`)
+- `GET /api/discussions/:id` - View discussion with answers (includes `commentCount`/`myVote` per answer)
+- `POST /api/discussions/:id/answers` - Add answer (403 when the discussion is ended)
 - `POST /api/discussions/:id/comment` - Comment on a discussion
+- `POST /api/discussions/:id/close` - End a discussion (starter only)
+- `POST /api/discussions/:id/reopen` - Reopen a discussion (starter only)
 - `POST /api/answers/:id/upvote` - Upvote answer
 - `POST /api/answers/:id/comment` - Comment on an answer
 
 ### Users
-- `GET /api/users/:username/profile` - User profile
+- `GET /api/users/me` - Current user profile with stats + badges
+- `PUT /api/users/me` - Update username / bio / avatarUrl
+- `GET /api/users/:username` - Public profile with stats + badges
 - `GET /api/users/:username/content` - User's content
 - `GET /api/users/:username/answers` - User's answers
 
