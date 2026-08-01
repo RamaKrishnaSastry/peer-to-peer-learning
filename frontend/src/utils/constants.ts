@@ -60,6 +60,11 @@ export const API_ENDPOINTS = {
     SUBMIT: (id: string) => `/daily-questions/${id}/submit`,
   },
   SEARCH: '/search',
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    READ_ALL: '/notifications/read-all',
+    READ: (id: string) => `/notifications/${id}/read`,
+  },
   USERS: {
     GET_PROFILE: (username: string) => `/users/${username}`,
     GET_ME: '/users/me',

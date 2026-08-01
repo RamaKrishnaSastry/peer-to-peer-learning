@@ -4,6 +4,7 @@ import { authMiddleware, optionalAuth } from '../middleware/auth';
 import prisma from '../db';
 import { toggleVote } from '../services/votes';
 import { recalculateUserStats } from '../services/engagement';
+import { notify } from '../services/notifications';
 
 const router = Router();
 
@@ -324,6 +325,14 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
         text,
       },
       include: { user: { select: { id: true, username: true } } },
+    });
+
+    await notify(content.creatorId, req.userId!, {
+      type: 'comment_on_content',
+      message: `${comment.user.username} commented on your resource "${content.title.slice(0, 60)}"`,
+      targetType: 'content',
+      targetId: id,
+      actorName: comment.user.username,
     });
 
     return res.status(201).json({

@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import prisma from '../db';
 import { toggleVote } from '../services/votes';
 import { recalculateUserStats } from '../services/engagement';
+import { notify } from '../services/notifications';
 
 const router = Router();
 
@@ -67,6 +68,18 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
         text,
       },
       include: { user: { select: { id: true, username: true } } },
+    });
+
+    const discussion = await prisma.discussion.findUnique({
+      where: { id: answer.discussionId },
+      select: { title: true },
+    });
+    await notify(answer.creatorId, req.userId!, {
+      type: 'comment_on_answer',
+      message: `${comment.user.username} commented on your answer in "${(discussion?.title ?? 'a discussion').slice(0, 60)}"`,
+      targetType: 'answer',
+      targetId: id,
+      actorName: comment.user.username,
     });
 
     return res.status(201).json({

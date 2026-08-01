@@ -4,7 +4,7 @@ import api from '../utils/api';
 export const useFetch = <T,>(
   key: string[],
   url: string,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; refetchInterval?: number }
 ) => {
   return useQuery<T>({
     queryKey: key,
@@ -13,6 +13,7 @@ export const useFetch = <T,>(
       return response.data.data;
     },
     enabled: options?.enabled !== false,
+    refetchInterval: options?.refetchInterval,
   });
 };
 

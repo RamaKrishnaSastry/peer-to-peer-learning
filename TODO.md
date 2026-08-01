@@ -8,8 +8,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **#1 Search** — backend `GET /api/search` (content/discussions/categories, domain-aware) + navbar search box + results page.
 - [x] **#2 Pagination / load-more** — Content + Discussions pages paginate (Load More) using backend `limit`/`offset`.
 - [x] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
-- [ ] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
-- [ ] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
+- [x] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
 - [ ] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak) + page.
 - [ ] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically (swap to R2/S3 in prod).
 - [ ] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.

@@ -205,4 +205,62 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const empty = await request(app).get('/api/search?q=zzzznothingzzzz');
     expect(empty.body.data.total).toBe(0);
   });
+
+  test('notifications are created on answers/comments and can be marked read', async () => {
+    const owner = await signupAndGetToken(app, 'notifowner');
+    const actor = await signupAndGetToken(app, 'notifactor');
+    const ownerAuth = { Authorization: `Bearer ${owner}` };
+    const actorAuth = { Authorization: `Bearer ${actor}` };
+
+    const create = await request(app)
+      .post('/api/discussions')
+      .set(ownerAuth)
+      .send({
+        title: 'Notify me on this thread',
+        description: 'I want to be notified',
+        categoryId,
+      });
+    const discussionId = create.body.data.id;
+
+    const answer = await request(app)
+      .post(`/api/discussions/${discussionId}/answers`)
+      .set(actorAuth)
+      .send({ text: 'Someone else answers your thread' });
+    expect(answer.status).toBe(201);
+
+    const ownerList = await request(app).get('/api/notifications').set(ownerAuth);
+    expect(ownerList.status).toBe(200);
+    expect(ownerList.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(ownerList.body.unreadCount).toBeGreaterThanOrEqual(1);
+    const answerNotif = ownerList.body.data.find((n: any) => n.type === 'answer_on_discussion');
+    expect(answerNotif).toBeDefined();
+    expect(answerNotif.message).toContain('notifactor');
+
+    await request(app).post('/api/notifications/read-all').set(ownerAuth);
+    const afterRead = await request(app).get('/api/notifications').set(ownerAuth);
+    expect(afterRead.body.unreadCount).toBe(0);
+
+    const comment = await request(app)
+      .post(`/api/answers/${answer.body.data.id}/comment`)
+      .set(ownerAuth)
+      .send({ text: 'Thanks for the answer!' });
+    expect(comment.status).toBe(201);
+
+    const actorList = await request(app).get('/api/notifications').set(actorAuth);
+    const commentNotif = actorList.body.data.find((n: any) => n.type === 'comment_on_answer');
+    expect(commentNotif).toBeDefined();
+    expect(commentNotif.message).toContain('notifowner');
+
+    const readOne = await request(app)
+      .post(`/api/notifications/${commentNotif.id}/read`)
+      .set(actorAuth);
+    expect(readOne.status).toBe(200);
+    expect(readOne.body.data.read).toBe(true);
+
+    const stranger = await signupAndGetToken(app, 'notifstranger');
+    const forbidden = await request(app)
+      .post(`/api/notifications/${commentNotif.id}/read`)
+      .set('Authorization', `Bearer ${stranger}`);
+    expect(forbidden.status).toBe(404);
+  });
 });

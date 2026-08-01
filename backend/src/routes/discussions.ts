@@ -3,6 +3,7 @@ import { AuthRequest } from '../types/express';
 import { authMiddleware, optionalAuth } from '../middleware/auth';
 import prisma from '../db';
 import { recalculateUserStats, awardBadge } from '../services/engagement';
+import { notify } from '../services/notifications';
 
 const router = Router();
 
@@ -289,6 +290,18 @@ router.post('/:id/answers', authMiddleware, async (req: AuthRequest, res: Respon
     await recalculateUserStats(req.userId!);
     await awardBadge(req.userId!, 'helper');
 
+    const actor = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { username: true },
+    });
+    await notify(discussion.creatorId, req.userId!, {
+      type: 'answer_on_discussion',
+      message: `${actor?.username ?? 'Someone'} answered your discussion "${discussion.title.slice(0, 60)}"`,
+      targetType: 'discussion',
+      targetId: id,
+      actorName: actor?.username,
+    });
+
     return res.status(201).json({
       success: true,
       data: answer,
@@ -331,6 +344,14 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
         text,
       },
       include: { user: { select: { id: true, username: true } } },
+    });
+
+    await notify(discussion.creatorId, req.userId!, {
+      type: 'comment_on_discussion',
+      message: `${comment.user.username} commented on your discussion "${discussion.title.slice(0, 60)}"`,
+      targetType: 'discussion',
+      targetId: id,
+      actorName: comment.user.username,
     });
 
     return res.status(201).json({

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Avatar } from "./Avatar";
+import { useFetch } from "../hooks/useFetch";
+import { API_ENDPOINTS } from "../utils/constants";
 
 const NAV_ITEMS = [
   { to: "/categories", label: "Browse" },
@@ -17,6 +19,13 @@ export const Navbar = () => {
   const [query, setQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const { data: notifications } = useFetch<{ unreadCount: number }>(
+    ["notifications-count"],
+    API_ENDPOINTS.NOTIFICATIONS.LIST,
+    { enabled: isAuthenticated, refetchInterval: 60000 },
+  );
+  const unread = notifications?.unreadCount ?? 0;
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +90,27 @@ export const Navbar = () => {
             </form>
 
             {isAuthenticated && user ? (
-              <div className="relative" ref={menuRef}>
+              <div className="relative flex items-center space-x-4">
+                <Link
+                  to="/notifications"
+                  aria-label="Notifications"
+                  className="relative p-2 text-gray-700 hover:text-blue-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                  {unread > 0 && (
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-xs font-bold">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </Link>
+                <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((open) => !open)}
                   aria-label="Account menu"
@@ -115,6 +144,7 @@ export const Navbar = () => {
                     </button>
                   </div>
                 )}
+                </div>
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-4">

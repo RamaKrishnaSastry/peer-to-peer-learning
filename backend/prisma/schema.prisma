@@ -29,9 +29,27 @@ model User {
   badges      UserBadge[]
   streak      Streak?
   attempts    QuestionAttempt[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String   // recipient
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String   // answer_on_discussion, comment_on_content, comment_on_answer, comment_on_discussion
+  message    String
+  targetType String?  // discussion, content, answer
+  targetId   String?
+  actorName  String?  // username of the actor
+  read       Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 model UserStats {
