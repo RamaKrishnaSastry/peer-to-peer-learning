@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../types/express';
 import { authMiddleware } from '../middleware/auth';
+import { validateUsername } from '../utils/helpers';
 import prisma from '../db';
 import { getStatsWithStreak } from '../services/engagement';
 
@@ -44,15 +45,47 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 // Update current user profile
 router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { bio, avatarUrl } = req.body;
+    const { bio, avatarUrl, username } = req.body;
 
-    const user = await prisma.user.update({
-      where: { id: req.userId },
-      data: {
-        ...(bio !== undefined ? { bio } : {}),
-        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
-      },
-    });
+    let newUsername: string | undefined;
+    if (username !== undefined) {
+      newUsername = (username as string).trim().toLowerCase();
+      if (!validateUsername(newUsername)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username must be 3-20 characters: letters, numbers, or underscores',
+        });
+      }
+      const taken = await prisma.user.findFirst({
+        where: { username: newUsername, NOT: { id: req.userId } },
+      });
+      if (taken) {
+        return res.status(409).json({
+          success: false,
+          error: 'Username is already taken',
+        });
+      }
+    }
+
+    let user;
+    try {
+      user = await prisma.user.update({
+        where: { id: req.userId },
+        data: {
+          ...(username !== undefined ? { username: newUsername } : {}),
+          ...(bio !== undefined ? { bio } : {}),
+          ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return res.status(409).json({
+          success: false,
+          error: 'Username is already taken',
+        });
+      }
+      throw error;
+    }
 
     return res.json({
       success: true,

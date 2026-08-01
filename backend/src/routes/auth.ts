@@ -3,7 +3,12 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { AuthRequest } from '../types/express';
-import { hashPassword } from '../utils/helpers';
+import {
+  hashPassword,
+  comparePasswords,
+  validatePassword,
+  validateUsername,
+} from '../utils/helpers';
 import { requestOtp, verifyOtp } from '../services/otp';
 import prisma from '../db';
 import { getStatsWithStreak } from '../services/engagement';
@@ -54,24 +59,63 @@ router.post('/otp/request', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Verify the OTP and log in / create the account
+// Verify the email OTP and create the account with the chosen password.
+// OTP is used only for registration; login is password-based.
 router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, code } = req.body;
+    const { email, code, password, username } = req.body;
+
+    if (!password || !validatePassword(password)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters',
+      });
+    }
+
+    const customUsername =
+      typeof username === 'string' && username.trim() !== ''
+        ? username.trim().toLowerCase()
+        : undefined;
+
+    if (customUsername !== undefined) {
+      if (!validateUsername(customUsername)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username must be 3-20 characters: letters, numbers, or underscores',
+        });
+      }
+      const taken = await prisma.user.findUnique({ where: { username: customUsername } });
+      if (taken) {
+        return res.status(409).json({
+          success: false,
+          error: 'Username is already taken',
+        });
+      }
+    }
+
     await verifyOtp(email, code);
 
     const normalized = (email as string).trim().toLowerCase();
 
-    let user = await prisma.user.findUnique({ where: { email: normalized } });
+    const existing = await prisma.user.findUnique({ where: { email: normalized } });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        error: 'An account already exists for this email. Please login.',
+      });
+    }
 
-    if (!user) {
-      const username = await generateUniqueUsername(normalized);
-      const hashedPassword = await hashPassword(crypto.randomBytes(32).toString('hex'));
+    const finalUsername =
+      customUsername ?? (await generateUniqueUsername(normalized));
+    const hashedPassword = await hashPassword(password);
+
+    let user;
+    try {
       user = await prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
           data: {
             email: normalized,
-            username,
+            username: finalUsername,
             password: hashedPassword,
             verified: true,
           },
@@ -79,11 +123,14 @@ router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
         await tx.userStats.create({ data: { userId: created.id } });
         return created;
       });
-    } else if (!user.verified) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { verified: true },
-      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return res.status(409).json({
+          success: false,
+          error: 'Username is already taken',
+        });
+      }
+      throw error;
     }
 
     const token = signToken(user.id);
@@ -99,6 +146,49 @@ router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
     return res.status(error.status || 500).json({
       success: false,
       error: error.message || 'Failed to verify code',
+    });
+  }
+});
+
+// Login with the password chosen at registration (accepts email or username)
+router.post('/login', async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required',
+      });
+    }
+
+    const identifier = (email as string).trim().toLowerCase();
+
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ email: identifier }, { username: identifier }] },
+    });
+
+    if (!user || !(await comparePasswords(password, user.password))) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+      });
+    }
+
+    const token = signToken(user.id);
+
+    return res.json({
+      success: true,
+      data: {
+        token,
+        user: toSafeUser(user),
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Login failed',
     });
   }
 });
