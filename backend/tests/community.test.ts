@@ -189,4 +189,20 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const jeeDisc = await request(app).get('/api/discussions?domain=JEE');
     expect(jeeDisc.body.data.some((d: any) => d.title === 'How does P/E ratio work?')).toBe(false);
   });
+
+  test('search finds content, discussions, and categories', async () => {
+    const res = await request(app).get('/api/search?q=P%2FE');
+    expect(res.status).toBe(200);
+    expect(res.body.data.total).toBeGreaterThan(0);
+    expect(res.body.data.discussions.some((d: any) => d.title === 'How does P/E ratio work?')).toBe(true);
+
+    const notes = await request(app).get('/api/search?q=notes');
+    expect(notes.body.data.content.some((c: any) => c.title === 'Test notes')).toBe(true);
+
+    const cat = await request(app).get('/api/search?q=History');
+    expect(cat.body.data.categories.length).toBeGreaterThan(0);
+
+    const empty = await request(app).get('/api/search?q=zzzznothingzzzz');
+    expect(empty.body.data.total).toBe(0);
+  });
 });

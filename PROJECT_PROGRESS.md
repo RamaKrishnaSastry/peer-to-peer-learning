@@ -166,6 +166,34 @@ Each entry = requirement → what we did → key files → status.
 - **Requirement:** Setup + API docs.
 - **What we did:** Updated `README.md` (SQLite setup, Google OAuth, Gemini verification, API reference, env vars). Left the historical planning docs in `docs/`, `ARCHITECTURE.md`, `SETUP.md`, etc. as-is (they still reference Claude/PostgreSQL and are out of date but serve as planning history).
 
+### 2.13 Product review — gaps vs. what a real user needs
+- **Requirement:** PM-level review of what's built vs. what actually retains UPSC/JEE/Finance aspirants. Grounded in a walk-through of every route and page, not guessing.
+- **What works today:** Signup with domain → daily MCQ + streak → browse curriculum → share content (link-based) → discuss/answer → upvote/rate → badges → profile. Auth is solid (OTP + password + Google); the AI-graded daily question with sourced questions is a genuine differentiator.
+- **Critical gaps (block real usage):**
+  1. **No search anywhere** — no backend endpoint, no frontend box. Value prop is "organized content"; not being searchable is a hard blocker past a few dozen items.
+  2. **No pagination in UI** — backend supports `limit`/`offset` but Content/Discussions pages render only the default page; items beyond ~10 are invisible.
+  3. **Content is link-only** — `contentUrl` is a string; no image/PDF/photo upload or storage integration. Narrows who can contribute.
+  4. **No forgot-password flow** — no reset route; a forgotten password = permanent lockout (Google-linked accounts excepted).
+  5. **No notifications** — no email/in-app/push. Streak about to break, someone answered your discussion → you'd never know. Biggest habit-loop lever missing.
+  6. **No moderation/reporting** — no report button, no admin queue, no post rate limiting.
+- **Big gaps (growth stalls):**
+  7. **Discussions can't be edited/deleted** — content has CRUD; discussions only create + close/reopen.
+  8. **No follow/social graph** — public profiles exist but nothing to curate "who I learn from."
+  9. **No leaderboard** — `UserStats` already tracks reputation/streak/upvotes; it's in the roadmap and the data model is ready.
+  10. **Daily question is MCQ-only** — UPSC Mains is subjective/essay-based; no difficulty selection or extra practice.
+  11. **Thin onboarding** — just "pick a domain," no tour/sample content.
+  12. **No bookmarks/saves**.
+  13. **Flat comments** — no reply-to-a-comment threading.
+- **Smaller items:** no real avatar upload UI, no dark mode, no PWA manifest, no email digest, `Content.version` unused in UI, spotty accessibility labels, no analytics/telemetry.
+- **Priority order (from the review):** 1 Search, 2 Pagination, 3 Forgot-password, 4 Notifications (in-app first; email needs a provider), 5 Leaderboard, 6 File upload, 7 Reporting/moderation, 8 Discussion edit/delete, 9 Follow + bookmarks, 10 Subjective questions.
+- **Status:** In progress — each item tracked as a checkbox in §10 and implemented one at a time (see commit log).
+
+### 2.14 Implementation-layer review — backend hardening + frontend polish
+- **Requirement:** Follow-up review focused on implementation-layer gaps (page-by-page frontend, then API/server), skipping the §2.13 product items already listed.
+- **Backend hardening:** (1) no rate limiting anywhere — OTP/login/create endpoints all unlimited (OTP has resend cooldown + max attempts, but `/api/auth/login` has no brute-force throttle); (2) no `helmet()` security headers; (3) validation is hand-rolled per route, no Zod/Joi layer, gaps likely in less-visited routes; (4) no API versioning (`/api/v1/`); (5) hard deletes on comments/content — no `deletedAt` soft-delete or audit trail; (6) no file/media layer (server side of link-only content); (7) streak/badge/notification work is synchronous inline — no job queue; (8) no caching for read-heavy rarely-changing data (category tree, today's question); (9) list endpoints DO return `total`/`hasMore` (content/discussions), but older endpoints may not; (10) logger is only `${method} ${path}` — no request IDs, status, latency.
+- **Frontend polish:** (1) `GET /daily-questions/history/:type` is built and in `constants.ts` but never wired to any page — shipped-but-invisible; (2) no streak history/calendar view (GitHub-style) despite `Streak`/`QuestionAttempt`; (3) each page hand-rolls red-banner errors — no shared auto-dismissing toast; (4) no client-side form validation (username/password rules only surface from the server); (5) no skeleton loading states, just a spinner; (6) mobile nav needs a dedicated tap-target/breadcrumb pass; (7) upvote/rate are not optimistic; (8) no delete confirmations (except logout); (9) no link/thumbnail preview before posting content.
+- **Status:** Tracked in `TODO.md`; several fold into the §2.13 items (file/media layer ↔ #6, total counts ↔ #2, history page is standalone).
+
 ### 2.12 Exam-domain scoping (pick UPSC / JEE / Finance, feed is locked to it)
 - **Requirement:** Users pick one exam domain; the platform shows only that domain's content. Hard lock — you only ever see your chosen domain; legacy users (created before this feature, no domain set) keep seeing everything until they pick one in Settings.
 - **Decision:** Hard lock with a Settings escape hatch. Signup requires a domain; existing users can set/change it in Settings (`PUT /api/users/me`). Domain is stored on `User.domain` and drives every list/filter on the frontend.
@@ -328,12 +356,26 @@ Convention going forward: small commits, one issue/feature each.
 
 ## 10. Next steps / roadmap
 
-- [ ] Push the ~24 commits to `origin/main`.
+### Product-gap fixes (from §2.13, in priority order)
+- [ ] **#1 Search** — backend `GET /api/search` (content/discussions/categories, domain-aware) + navbar search box + results page.
+- [ ] **#2 Pagination / load-more** — Content + Discussions pages paginate (Load More) using backend `limit`/`offset`.
+- [ ] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
+- [ ] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
+- [ ] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak) + page.
+- [ ] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically (swap to R2/S3 in prod).
+- [ ] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
+- [ ] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
+- [ ] **#9 Follow + bookmarks** — `Follow`/`Bookmark` models, follow button on profiles, bookmark buttons, bookmarks page.
+- [ ] **#10 Subjective/Mains-style questions** — open-ended daily question type + AI essay grading.
+
+### Previously planned
+- [ ] Push commits to `origin/main`.
 - [ ] Wire an email provider (Resend/Brevo) for real OTP delivery via env var; keep the console fallback in dev.
 - [ ] Expand the sourced question bank (more PYQs, toppers notes, coaching-institute questions with sources).
 - [ ] Verify Google sign-in end-to-end once the frontend dev server is restarted.
-- [ ] Add leaderboards (reputation ranking) — planned for Phase 2.
 - [ ] Add more domains/categories and more seed questions.
 - [ ] Address `npm audit` findings and the backend lint config.
 - [ ] Production deploy: switch Prisma to PostgreSQL, set real secrets, host frontend (Vercel) + backend (Railway/Heroku).
+- [ ] Flat comments → threaded replies (reply-to-a-comment).
+- [ ] Dark mode, PWA manifest, avatar upload UI, email digest, basic analytics.
 ```

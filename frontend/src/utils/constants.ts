@@ -57,6 +57,7 @@ export const API_ENDPOINTS = {
     HISTORY: (type: string) => `/daily-questions/history/${type}`,
     SUBMIT: (id: string) => `/daily-questions/${id}/submit`,
   },
+  SEARCH: '/search',
   USERS: {
     GET_PROFILE: (username: string) => `/users/${username}`,
     GET_ME: '/users/me',

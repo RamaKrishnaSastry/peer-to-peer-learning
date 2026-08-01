@@ -7,6 +7,7 @@ import { LoginPage } from "./pages/Login";
 import { SignupPage } from "./pages/Signup";
 import { CategoriesPage } from "./pages/Categories";
 import { CategoryPage } from "./pages/CategoryPage";
+import { SearchPage } from "./pages/SearchPage";
 import { DailyQuestionPage } from "./pages/DailyQuestion";
 import { DiscussionsPage } from "./pages/Discussions";
 import { DiscussionDetailPage } from "./pages/DiscussionDetail";
@@ -29,6 +30,7 @@ function App() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/categories/:slug" element={<CategoryPage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/daily" element={<DailyQuestionPage />} />
             <Route path="/discussions" element={<DiscussionsPage />} />
             <Route path="/discussions/:id" element={<DiscussionDetailPage />} />

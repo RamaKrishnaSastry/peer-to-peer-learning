@@ -11,6 +11,7 @@ import answerRoutes from './routes/answers';
 import commentRoutes from './routes/comments';
 import userRoutes from './routes/users';
 import dailyQuestionRoutes from './routes/dailyQuestions';
+import searchRoutes from './routes/search';
 
 // Middleware
 import { errorHandler, corsOptions } from './middleware/auth';
@@ -49,6 +50,7 @@ export const createApp = (): Express => {
   app.use('/api/comments', commentRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/daily-questions', dailyQuestionRoutes);
+  app.use('/api/search', searchRoutes);
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

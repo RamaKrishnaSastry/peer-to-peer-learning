@@ -14,8 +14,18 @@ export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    setQuery("");
+    setMobileOpen(false);
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,6 +69,17 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <form onSubmit={submitSearch} className="hidden md:block">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search content, discussions..."
+                aria-label="Search"
+                className="w-56 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </form>
+
             {isAuthenticated && user ? (
               <div className="relative" ref={menuRef}>
                 <button
@@ -140,6 +161,16 @@ export const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="px-4 py-3 space-y-1">
+            <form onSubmit={submitSearch} className="mb-2">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search content, discussions..."
+                aria-label="Search"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </form>
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
