@@ -3,12 +3,8 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { AuthRequest } from '../types/express';
-import {
-  validateEmail,
-  validatePassword,
-  hashPassword,
-  comparePasswords,
-} from '../utils/helpers';
+import { hashPassword } from '../utils/helpers';
+import { requestOtp, verifyOtp } from '../services/otp';
 import prisma from '../db';
 import { getStatsWithStreak } from '../services/engagement';
 import { authMiddleware } from '../middleware/auth';
@@ -41,97 +37,52 @@ const generateUniqueUsername = async (email: string): Promise<string> => {
   return username;
 };
 
-// Signup
-router.post('/signup', async (req: AuthRequest, res: Response) => {
+// Request an email OTP (dev: code is logged to the console and echoed back)
+router.post('/otp/request', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, username, password } = req.body;
-
-    if (!email || !username || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email, username, and password are required',
-      });
-    }
-
-    if (!validateEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid email format',
-      });
-    }
-
-    if (!validatePassword(password)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 8 characters',
-      });
-    }
-
-    const existing = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
-    });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email or username already registered',
-      });
-    }
-
-    const hashedPassword = await hashPassword(password);
-
-    const user = await prisma.$transaction(async (tx) => {
-      const created = await tx.user.create({
-        data: { email, username, password: hashedPassword },
-      });
-      await tx.userStats.create({ data: { userId: created.id } });
-      return created;
-    });
-
-    const token = signToken(user.id);
-
-    return res.status(201).json({
+    const { email } = req.body;
+    const { devOtp } = await requestOtp(email);
+    return res.json({
       success: true,
-      data: {
-        token,
-        user: toSafeUser(user),
-      },
+      data: { devOtp },
     });
-  } catch (error) {
-    console.error('Signup error:', error);
-    return res.status(500).json({
+  } catch (error: any) {
+    return res.status(error.status || 500).json({
       success: false,
-      error: 'Server error during signup',
+      error: error.message || 'Failed to send verification code',
     });
   }
 });
 
-// Login
-router.post('/login', async (req: AuthRequest, res: Response) => {
+// Verify the OTP and log in / create the account
+router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, code } = req.body;
+    await verifyOtp(email, code);
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required',
-      });
-    }
+    const normalized = (email as string).trim().toLowerCase();
 
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username: email }] },
-    });
+    let user = await prisma.user.findUnique({ where: { email: normalized } });
+
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
+      const username = await generateUniqueUsername(normalized);
+      const hashedPassword = await hashPassword(crypto.randomBytes(32).toString('hex'));
+      user = await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: normalized,
+            username,
+            password: hashedPassword,
+            verified: true,
+          },
+        });
+        await tx.userStats.create({ data: { userId: created.id } });
+        return created;
       });
-    }
-
-    const passwordMatch = await comparePasswords(password, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
+    } else if (!user.verified) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { verified: true },
       });
     }
 
@@ -144,11 +95,10 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
         user: toSafeUser(user),
       },
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({
+  } catch (error: any) {
+    return res.status(error.status || 500).json({
       success: false,
-      error: 'Server error during login',
+      error: error.message || 'Failed to verify code',
     });
   }
 });

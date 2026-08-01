@@ -234,3 +234,16 @@ model QuestionAttempt {
 
   @@unique([userId, questionId])
 }
+
+model OtpVerification {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}

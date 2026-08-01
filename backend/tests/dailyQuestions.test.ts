@@ -1,21 +1,12 @@
 import request from 'supertest';
 import createApp from '../src/app';
+import { signupAndGetToken } from './helpers';
 
 const app = createApp();
-let counter = 0;
-const unique = (prefix: string) => `${prefix}_${Date.now()}_${counter++}`;
-
-const signupAndGetToken = async () => {
-  const email = unique('dq') + '@test.com';
-  const res = await request(app)
-    .post('/api/auth/signup')
-    .send({ email, username: unique('dq'), password: 'password123' });
-  return res.body.data.token;
-};
 
 describe('Daily Questions & Streaks', () => {
   test('returns today\'s question with options and un-attempted state', async () => {
-    const token = await signupAndGetToken();
+    const token = await signupAndGetToken(app, 'dq');
     const res = await request(app)
       .get('/api/daily-questions/today/UPSC')
       .set('Authorization', `Bearer ${token}`);
@@ -32,7 +23,7 @@ describe('Daily Questions & Streaks', () => {
   });
 
   test('submitting a correct answer returns streak 1 and correct verdict', async () => {
-    const token = await signupAndGetToken();
+    const token = await signupAndGetToken(app, 'dq');
     const auth = { Authorization: `Bearer ${token}` };
 
     const today = await request(app).get('/api/daily-questions/today/UPSC').set(auth);
@@ -51,7 +42,7 @@ describe('Daily Questions & Streaks', () => {
   });
 
   test('submitting an incorrect answer marks it incorrect and reveals the right option', async () => {
-    const token = await signupAndGetToken();
+    const token = await signupAndGetToken(app, 'dq');
     const auth = { Authorization: `Bearer ${token}` };
 
     const today = await request(app).get('/api/daily-questions/today/JEE').set(auth);
@@ -71,7 +62,7 @@ describe('Daily Questions & Streaks', () => {
   });
 
   test('second submission is rejected with 409 and streak stays at 1', async () => {
-    const token = await signupAndGetToken();
+    const token = await signupAndGetToken(app, 'dq');
     const auth = { Authorization: `Bearer ${token}` };
 
     const today = await request(app).get('/api/daily-questions/today/Finance').set(auth);
@@ -94,7 +85,7 @@ describe('Daily Questions & Streaks', () => {
   });
 
   test('todays question shows attempted after submission', async () => {
-    const token = await signupAndGetToken();
+    const token = await signupAndGetToken(app, 'dq');
     const auth = { Authorization: `Bearer ${token}` };
 
     const today = await request(app).get('/api/daily-questions/today/UPSC').set(auth);

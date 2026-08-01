@@ -1,17 +1,8 @@
 import request from 'supertest';
 import createApp from '../src/app';
+import { signupAndGetToken } from './helpers';
 
 const app = createApp();
-let counter = 0;
-const unique = (prefix: string) => `${prefix}_${Date.now()}_${counter++}`;
-
-const signupAndGetToken = async () => {
-  const email = unique('comm') + '@test.com';
-  const res = await request(app)
-    .post('/api/auth/signup')
-    .send({ email, username: unique('comm'), password: 'password123' });
-  return res.body.data.token;
-};
 
 describe('Community: Content, Discussions, Answers, Upvotes', () => {
   let token: string;
@@ -19,7 +10,7 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
   let categoryId: number;
 
   beforeAll(async () => {
-    token = await signupAndGetToken();
+    token = await signupAndGetToken(app, 'comm');
     auth = { Authorization: `Bearer ${token}` };
     const cats = await request(app).get('/api/categories');
     categoryId = cats.body.data[0].id;
