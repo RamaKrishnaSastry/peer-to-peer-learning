@@ -62,6 +62,7 @@ export const API_ENDPOINTS = {
   SEARCH: '/search',
   LEADERBOARD: '/leaderboard',
   REPORTS: '/reports',
+  UPLOADS: '/uploads',
   NOTIFICATIONS: {
     LIST: '/notifications',
     READ_ALL: '/notifications/read-all',

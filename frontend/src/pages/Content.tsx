@@ -34,6 +34,7 @@ export const ContentPage = () => {
   const [description, setDescription] = useState("");
   const [type, setType] = useState<string>(CONTENT_TYPES.VIDEO);
   const [contentUrl, setContentUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [newCategoryId, setNewCategoryId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -78,21 +79,32 @@ export const ContentPage = () => {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description || !contentUrl || !newCategoryId) return;
+    if (!title || !description || !newCategoryId) return;
+    if (!contentUrl && !file) return;
     setSubmitting(true);
     setError("");
     setSuccess(false);
     try {
+      let finalUrl = contentUrl;
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploadResponse = await api.post(API_ENDPOINTS.UPLOADS, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        finalUrl = uploadResponse.data.data.url;
+      }
       await api.post(API_ENDPOINTS.CONTENT.CREATE, {
         title,
         description,
         type,
-        contentUrl,
+        contentUrl: finalUrl,
         categoryId: parseInt(newCategoryId),
       });
       setTitle("");
       setDescription("");
       setContentUrl("");
+      setFile(null);
       setNewCategoryId("");
       setShowForm(false);
       setSuccess(true);
@@ -199,10 +211,31 @@ export const ContentPage = () => {
                 type="url"
                 value={contentUrl}
                 onChange={(e) => setContentUrl(e.target.value)}
-                required
                 className="w-full border border-gray-300 rounded px-4 py-2"
                 placeholder="https://..."
               />
+            </div>
+            <div className="border-t border-gray-100 pt-4">
+              <label className="block text-gray-700 mb-2">
+                Or upload a file {type === CONTENT_TYPES.VIDEO ? "" : "(PDF, docs, slides, images — max 25 MB)"}
+              </label>
+              <input
+                type="file"
+                onChange={(e) => {
+                  const picked = e.target.files?.[0] ?? null;
+                  setFile(picked);
+                  if (picked) setContentUrl("");
+                }}
+                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+              {file && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">
+                Provide either a link or a file.
+              </p>
             </div>
             <button
               type="submit"

@@ -93,6 +93,14 @@ export const errorHandler = (
     return;
   }
 
+  if (error.name === 'MulterError' || error.code === 'FILE_TYPE_NOT_ALLOWED') {
+    res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+    return;
+  }
+
   if (error.code === 'P2025') {
     res.status(404).json({
       success: false,

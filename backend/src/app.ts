@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import dotenv from 'dotenv';
 
 // Routes
@@ -16,6 +17,7 @@ import searchRoutes from './routes/search';
 import notificationRoutes from './routes/notifications';
 import leaderboardRoutes from './routes/leaderboard';
 import reportRoutes from './routes/reports';
+import uploadRoutes from './routes/uploads';
 
 // Middleware
 import { errorHandler, corsOptions } from './middleware/auth';
@@ -31,6 +33,9 @@ export const createApp = (): Express => {
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // Serve uploaded files statically (both from src during dev and dist in prod)
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // Request logging
   app.use((req: Request, _res: Response, next) => {
@@ -61,6 +66,7 @@ export const createApp = (): Express => {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/leaderboard', leaderboardRoutes);
   app.use('/api/reports', reportRoutes);
+  app.use('/api/uploads', uploadRoutes);
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

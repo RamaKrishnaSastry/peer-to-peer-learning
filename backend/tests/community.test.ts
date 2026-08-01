@@ -1,7 +1,6 @@
 import request from 'supertest';
 import createApp from '../src/app';
 import { signupAndGetToken } from './helpers';
-
 const app = createApp();
 
 describe('Community: Content, Discussions, Answers, Upvotes', () => {
@@ -348,5 +347,33 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
 
     const openQueue = await request(app).get('/api/reports?status=open').set(reporterAuth);
     expect(openQueue.body.data.some((r: any) => r.id === report.body.data.id)).toBe(false);
+  });
+
+  test('file upload stores a file and returns a public URL', async () => {
+    const uploader = await signupAndGetToken(app, 'uploader');
+    const uploaderAuth = { Authorization: `Bearer ${uploader}` };
+
+    const up = await request(app)
+      .post('/api/uploads')
+      .set(uploaderAuth)
+      .attach('file', Buffer.from('hello upload'), {
+        filename: 'notes.txt',
+        contentType: 'text/plain',
+      });
+    expect(up.status).toBe(201);
+    expect(up.body.data.url).toMatch(/^\/uploads\//);
+
+    const fileRes = await request(app).get(up.body.data.url);
+    expect(fileRes.status).toBe(200);
+    expect(fileRes.text).toContain('hello upload');
+
+    const badExt = await request(app)
+      .post('/api/uploads')
+      .set(uploaderAuth)
+      .attach('file', Buffer.from('x'), { filename: 'evil.exe', contentType: 'application/octet-stream' });
+    expect(badExt.status).toBe(400);
+
+    const noFile = await request(app).post('/api/uploads').set(uploaderAuth);
+    expect(noFile.status).toBe(400);
   });
 });
