@@ -99,13 +99,13 @@ export const ContentPage = () => {
         </div>
       )}
 
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          <span className="text-gray-700 font-medium">Filter:</span>
+      <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="flex items-end gap-2 flex-wrap">
+          <span className="text-gray-700 font-medium pb-2">Filter:</span>
           <CategorySelect value={categoryId} onChange={setCategoryId} domain={domain} />
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-gray-700 font-medium">Sort:</label>
+        <div className="ml-auto flex items-end gap-2">
+          <label className="text-gray-700 font-medium pb-2">Sort:</label>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
@@ -163,7 +163,7 @@ export const ContentPage = () => {
               </div>
               <div>
                 <label className="block text-gray-700 mb-2">Category</label>
-                <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" domain={domain} />
+                <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="flex-col" domain={domain} />
               </div>
             </div>
             <div>
@@ -191,60 +191,61 @@ export const ContentPage = () => {
       )}
 
       <Loading isLoading={isLoading}>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {content?.map((item) => {
             const thumb = getYouTubeThumbnail(item.contentUrl);
             return (
               <Link
                 key={item.id}
                 to={`/content/${item.id}`}
-                className="block bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition"
+                className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-300 transition"
               >
-                <div className="flex items-start gap-4">
-                  {thumb ? (
-                    <img
-                      src={thumb}
-                      alt={item.title}
-                      className="w-24 h-16 object-cover rounded shrink-0"
-                    />
-                  ) : (
-                    <div className="w-24 h-16 bg-gray-100 flex items-center justify-center text-2xl text-gray-400 shrink-0 rounded">
-                      📄
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-blue-700">{item.title}</h3>
-                    <p className="text-gray-600 line-clamp-2">{item.description}</p>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
-                      <Avatar name={item.creator.username} className="w-6 h-6 text-xs" />
-                      <span>
-                        by{" "}
-                        <Link
-                          to={`/users/${item.creator.username}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {item.creator.username}
-                        </Link>
-                      </span>
-                      <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded uppercase text-xs font-bold">
-                        {item.type}
-                      </span>
-                      <span>in {item.category.name}</span>
-                    </div>
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt={item.title}
+                    className="w-full h-36 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-36 bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center text-5xl text-gray-300">
+                    📄
                   </div>
-                  <div className="text-right text-sm text-gray-500 shrink-0">
-                    <div className="font-semibold text-gray-700">
-                      ⭐ {item.avgRating.toFixed(1)} ({item.ratingCount})
-                    </div>
-                    <div>👍 {item.upvoteCount}</div>
-                    <div>{item.commentCount} comments</div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-bold text-blue-700 line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <span className="shrink-0 bg-gray-200 text-gray-700 px-2 py-0.5 rounded uppercase text-xs font-bold">
+                      {item.type}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-1">
+                    {item.description}
+                  </p>
+                  <div className="text-xs text-gray-500 mb-3">{item.category.name}</div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Avatar name={item.creator.username} className="w-6 h-6 text-xs" />
+                    <Link
+                      to={`/users/${item.creator.username}`}
+                      className="text-blue-600 hover:underline truncate"
+                    >
+                      {item.creator.username}
+                    </Link>
+                    <span className="ml-auto shrink-0 font-semibold text-gray-700">
+                      ⭐ {item.avgRating.toFixed(1)}
+                    </span>
+                    <span className="shrink-0">👍 {item.upvoteCount}</span>
+                    <span className="shrink-0 text-gray-400">
+                      💬 {item.commentCount}
+                    </span>
                   </div>
                 </div>
               </Link>
             );
           })}
           {content?.length === 0 && (
-            <div className="text-center text-gray-500 py-10">
+            <div className="col-span-full text-center text-gray-500 py-10">
               <p className="mb-4">No content yet.</p>
               {isAuthenticated ? (
                 <button
@@ -254,10 +255,7 @@ export const ContentPage = () => {
                   Share the first resource
                 </button>
               ) : (
-                <Link
-                  to="/login"
-                  className="text-blue-600 hover:underline"
-                >
+                <Link to="/login" className="text-blue-600 hover:underline">
                   Login to share content
                 </Link>
               )}

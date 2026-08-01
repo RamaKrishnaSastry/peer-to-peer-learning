@@ -151,7 +151,8 @@ Each entry = requirement → what we did → key files → status.
   - **Content comments are upvoteable** (was: backend supported it, UI didn't).
   - **Success feedback** — green banners after posting a discussion/content, ending/reopening a discussion, posting a comment, saving profile.
   - **Footer year** is now dynamic (was hard-coded 2024).
-- **Key files:** `frontend/src/components/Navbar.tsx`, `CategorySelect.tsx`, `Avatar.tsx`, `pages/UserProfile.tsx`, `pages/Content.tsx`, `pages/Discussions.tsx`, `pages/ContentDetail.tsx`, `pages/DiscussionDetail.tsx`, `pages/Settings.tsx`, `pages/Profile.tsx`, `components/Footer.tsx`, `backend/src/routes/categories.ts`.
+- **Card-based browsing (new):** Browse and Content now use multi-column card grids (thumbnail-first cards with rating/upvotes/creator). The category drill-down (`/categories/:slug`) matches the docs: breadcrumb (current level bold) + "← Back" button + content counts per category/child (added `contentCount` to `GET /categories` and `GET /categories/:slug`), sub-category cards, and — at **leaf** topics only — the actual content cards rendered inline. Filter + sort live on a single toolbar line (shared with Discussions).
+- **Key files:** `frontend/src/components/Navbar.tsx`, `CategorySelect.tsx`, `Avatar.tsx`, `pages/CategoryPage.tsx`, `pages/UserProfile.tsx`, `pages/Content.tsx`, `pages/Discussions.tsx`, `pages/ContentDetail.tsx`, `pages/DiscussionDetail.tsx`, `pages/Settings.tsx`, `pages/Profile.tsx`, `components/Footer.tsx`, `backend/src/routes/categories.ts`.
 - **Status:** Done.
 
 ### 2.10 Testing

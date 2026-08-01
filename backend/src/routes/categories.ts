@@ -11,9 +11,22 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
       where: { level: 0 },
       orderBy: { id: 'asc' },
     });
+
+    const grouped = await prisma.content.groupBy({
+      by: ['categoryId'],
+      _count: { _all: true },
+    });
+    const countMap = new Map<number, number>();
+    for (const g of grouped) countMap.set(g.categoryId, g._count._all);
+
+    const withCounts = rootCategories.map((cat) => ({
+      ...cat,
+      contentCount: countMap.get(cat.id) ?? 0,
+    }));
+
     return res.json({
       success: true,
-      data: rootCategories,
+      data: withCounts,
     });
   } catch (error) {
     console.error('List categories error:', error);
@@ -63,9 +76,26 @@ router.get('/:slug', async (req: AuthRequest, res: Response) => {
       orderBy: { id: 'asc' },
     });
 
+    const countMap = new Map<number, number>();
+    if (category.isLeaf || children.length > 0) {
+      const grouped = await prisma.content.groupBy({
+        by: ['categoryId'],
+        _count: { _all: true },
+      });
+      for (const g of grouped) countMap.set(g.categoryId, g._count._all);
+    }
+
+    const withCounts = (cat: { id: number }) => ({
+      ...cat,
+      contentCount: countMap.get(cat.id) ?? 0,
+    });
+
     return res.json({
       success: true,
-      data: { ...category, children },
+      data: {
+        ...withCounts(category),
+        children: children.map(withCounts),
+      },
     });
   } catch (error) {
     console.error('Get category error:', error);

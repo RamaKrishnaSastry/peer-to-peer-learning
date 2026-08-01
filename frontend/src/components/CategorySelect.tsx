@@ -77,10 +77,15 @@ export const CategorySelect = ({ value, onChange, className, domain }: CategoryS
     levelsToRender.push(level);
   }
 
+  const containerClass =
+    className === "flex-col"
+      ? "flex flex-col gap-3 w-full"
+      : "flex flex-wrap items-end gap-3";
+
   return (
-    <div className={`grid gap-3 ${className || "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"}`}>
+    <div className={containerClass}>
       {levelsToRender.map((level) => (
-        <div key={level}>
+        <div key={level} className="min-w-[9rem]">
           <label className="block text-gray-700 text-sm mb-1">
             {LEVEL_LABELS[level] ?? `Level ${level + 1}`}
           </label>

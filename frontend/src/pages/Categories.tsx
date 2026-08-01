@@ -10,6 +10,7 @@ interface Category {
   slug: string;
   domain: string;
   level: number;
+  contentCount?: number;
   children?: Category[];
 }
 
@@ -35,12 +36,25 @@ export const CategoriesPage = () => {
             <Link
               key={category.id}
               to={`/categories/${category.slug}`}
-              className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition"
+              className="p-6 border border-gray-200 rounded-lg hover:shadow-lg hover:border-blue-300 transition"
             >
-              <h2 className="text-2xl font-bold text-blue-600 mb-2">
-                {category.name}
-              </h2>
-              <p className="text-gray-600">Domain: {category.domain}</p>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-blue-600">
+                  {category.name}
+                </h2>
+                <span className="text-3xl">
+                  {category.name === "UPSC"
+                    ? "🏛️"
+                    : category.name === "JEE"
+                      ? "⚙️"
+                      : "📈"}
+                </span>
+              </div>
+              <p className="text-gray-600">
+                {category.contentCount && category.contentCount > 0
+                  ? `${category.contentCount} shared item${category.contentCount === 1 ? "" : "s"}`
+                  : "No content yet"}
+              </p>
             </Link>
           ))}
         </div>

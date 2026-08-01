@@ -91,13 +91,13 @@ export const DiscussionsPage = () => {
         </div>
       )}
 
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          <span className="text-gray-700 font-medium">Filter:</span>
+      <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="flex items-end gap-2 flex-wrap">
+          <span className="text-gray-700 font-medium pb-2">Filter:</span>
           <CategorySelect value={categoryId} onChange={setCategoryId} domain={domain} />
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-gray-700 font-medium">Sort:</label>
+        <div className="ml-auto flex items-end gap-2">
+          <label className="text-gray-700 font-medium pb-2">Sort:</label>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
@@ -143,7 +143,7 @@ export const DiscussionsPage = () => {
             </div>
             <div>
               <label className="block text-gray-700 mb-2">Category</label>
-              <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" domain={domain} />
+              <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="flex-col" domain={domain} />
             </div>
             <button
               type="submit"
