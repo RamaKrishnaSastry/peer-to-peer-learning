@@ -217,6 +217,8 @@ VITE_GOOGLE_CLIENT_ID=...               # must match backend GOOGLE_CLIENT_ID
 All work is committed on `main` as focused, topic-scoped commits (17 commits, not pushed):
 
 ```
+2bf5e94 fix(backend): send option text to AI verification so verdicts are meaningful
+7db6a4f fix(backend): reject tokens for deleted users with 401 instead of a 500 on writes
 4fa5112 feat(frontend): show question source on daily question page
 1d00b59 feat(backend): sourced question bank with lazy LLM variant generation
 e618caa feat(frontend): add email OTP login/signup flow
@@ -243,7 +245,7 @@ Convention going forward: small commits, one issue/feature each.
 ## 7. Current status
 
 - Backend tsc build: clean. Frontend build: clean. Frontend lint: clean.
-- Tests: 18/18 passing (3 suites).
+- Tests: 19/19 passing (3 suites).
 - Gemini verification: verified live (works with the key in `backend/.env`).
 - Gemini question-variant generation: verified live (generates a fresh grounded question when today has no scheduled one).
 - Google OAuth: key configured in both `.env` files; needs frontend restart to appear.
@@ -256,6 +258,8 @@ Convention going forward: small commits, one issue/feature each.
 - **Running server is stale:** any backend started before commit `0058254` runs old password-auth code; restart it after pulling changes.
 - **OTP delivery is dev-only:** codes print to the backend console + `devOtp` in the response. A real mail provider (Resend/Brevo) is not wired yet — future env-var work.
 - **Backend lint script is broken** (`eslint src/**/*.ts`, no ESLint config present) — pre-existing, not addressed.
+- **Bug fixed — stale tokens:** `authMiddleware` now checks the user still exists in the DB and returns 401 (was: JWT-valid but deleted user → FK error → 500 "Failed to submit answer"). Happens whenever `prisma migrate reset` wipes users; the frontend logs out automatically.
+- **Bug fixed — AI verdict meaningless:** submit now sends the selected option text (`"B) option text"`) to Gemini, not just the bare letter `"B"` (was: `REQUIRES_CONTEXT` "answer refers to an option letter..."). Offline fallback compares the leading option letter.
 - **Vite 8 deprecation warnings** (`optimizeDeps.rollupOptions`, `esbuild`) — harmless.
 - **`npm audit`:** 13 vulnerabilities (2 low, 1 moderate, 10 high) reported, not yet addressed.
 - **Docs drift:** `docs/`, `ARCHITECTURE.md`, `SETUP.md`, `TEMPLATE_SUMMARY.md` still describe Claude + PostgreSQL; kept as planning history only.
