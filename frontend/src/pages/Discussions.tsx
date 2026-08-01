@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useFetch } from "../hooks/useFetch";
+import { usePaginatedList } from "../hooks/usePaginatedList";
 import api from "../utils/api";
 import { API_ENDPOINTS } from "../utils/constants";
 import { getErrorMessage } from "../utils/helpers";
@@ -41,10 +41,18 @@ export const DiscussionsPage = () => {
   if (categoryId) params.set("categoryId", categoryId);
   if (domain) params.set("domain", domain);
 
-  const { data: discussions, isLoading } = useFetch<Discussion[]>(
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePaginatedList<Discussion>(
     ["discussions", categoryId, sort, domain ?? "all"],
     `${API_ENDPOINTS.DISCUSSIONS.LIST}?${params.toString()}`,
+    10,
   );
+  const discussions = data?.pages.flatMap((p) => p.data) ?? [];
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +224,17 @@ export const DiscussionsPage = () => {
             </div>
           )}
         </div>
+        {hasNextPage && (
+          <div className="text-center mt-8">
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="bg-white border-2 border-blue-600 text-blue-600 px-8 py-2.5 rounded-lg font-bold hover:bg-blue-50 disabled:opacity-50"
+            >
+              {isFetchingNextPage ? "Loading..." : "Load more"}
+            </button>
+          </div>
+        )}
       </Loading>
     </div>
   );
