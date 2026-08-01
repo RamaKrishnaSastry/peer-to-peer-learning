@@ -29,8 +29,8 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, username: string, password: string) => Promise<void>;
+  requestOtp: (email: string) => Promise<string | undefined>;
+  verifyOtp: (email: string, code: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 }
@@ -62,28 +62,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(newUser);
   };
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await api.post("/auth/login", { email, password });
-      const { token: newToken, user: newUser } = response.data.data;
-      storeSession(newToken, newUser);
-    } catch (error) {
-      console.error("Login failed:", error);
-      throw error;
-    }
+  const requestOtp = async (email: string): Promise<string | undefined> => {
+    const response = await api.post("/auth/otp/request", { email });
+    return response.data.data?.devOtp;
   };
 
-  const signup = async (email: string, username: string, password: string) => {
+  const verifyOtp = async (email: string, code: string) => {
     try {
-      const response = await api.post("/auth/signup", {
-        email,
-        username,
-        password,
-      });
+      const response = await api.post("/auth/otp/verify", { email, code });
       const { token: newToken, user: newUser } = response.data.data;
       storeSession(newToken, newUser);
     } catch (error) {
-      console.error("Signup failed:", error);
+      console.error("OTP verification failed:", error);
       throw error;
     }
   };
@@ -113,8 +103,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         token,
         isLoading,
         isAuthenticated: !!token,
-        login,
-        signup,
+        requestOtp,
+        verifyOtp,
         loginWithGoogle,
         logout,
       }}

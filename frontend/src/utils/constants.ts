@@ -11,8 +11,8 @@ export const CONTENT_TYPES = {
 
 export const API_ENDPOINTS = {
   AUTH: {
-    SIGNUP: '/auth/signup',
-    LOGIN: '/auth/login',
+    REQUEST_OTP: '/auth/otp/request',
+    VERIFY_OTP: '/auth/otp/verify',
     GOOGLE: '/auth/google',
     ME: '/auth/me',
   },
