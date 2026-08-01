@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useFetch } from "../hooks/useFetch";
 import { API_ENDPOINTS } from "../utils/constants";
 import { useAuth } from "../contexts/AuthContext";
+import { ChangeUsernameForm } from "../components/ChangeUsernameForm";
 import { Loading } from "../components/Loading";
 
 interface Profile {
@@ -74,6 +75,11 @@ export const ProfilePage = () => {
                 <p className="text-gray-500">{profile.email}</p>
                 {profile.bio && <p className="text-gray-700 mt-2">{profile.bio}</p>}
               </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+              <h2 className="font-semibold mb-3">Change username</h2>
+              <ChangeUsernameForm />
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

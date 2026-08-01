@@ -12,6 +12,7 @@ import { DiscussionDetailPage } from "./pages/DiscussionDetail";
 import { ContentPage } from "./pages/Content";
 import { ContentDetailPage } from "./pages/ContentDetail";
 import { ProfilePage } from "./pages/Profile";
+import { SettingsPage } from "./pages/Settings";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
             <Route path="/content" element={<ContentPage />} />
             <Route path="/content/:id" element={<ContentDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
 

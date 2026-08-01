@@ -1,13 +1,37 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+const AVATAR_COLORS = [
+  "bg-blue-500",
+  "bg-green-500",
+  "bg-purple-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-teal-500",
+  "bg-indigo-500",
+  "bg-rose-500",
+];
+
+const avatarColorFor = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    setMenuOpen(false);
+    if (window.confirm("Are you sure you want to sign out?")) {
+      logout();
+      navigate("/");
+    }
   };
 
   return (
@@ -33,18 +57,45 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              <>
-                <Link to="/profile" className="text-gray-700 hover:text-blue-600">
-                  {user?.username}
-                </Link>
+            {isAuthenticated && user ? (
+              <div
+                className="relative"
+                onMouseEnter={() => setMenuOpen(true)}
+                onMouseLeave={() => setMenuOpen(false)}
+              >
                 <button
-                  onClick={handleLogout}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  className={`w-10 h-10 rounded-full text-white font-bold flex items-center justify-center ${avatarColorFor(user.username)}`}
+                  aria-label="Account menu"
                 >
-                  Logout
+                  {user.username.charAt(0).toUpperCase()}
                 </button>
-              </>
+
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                    <Link
+                      to="/profile"
+                      onClick={() => setMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Settings
+                    </Link>
+                    <hr className="my-1 border-gray-200" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <Link to="/login" className="text-gray-700 hover:text-blue-600">

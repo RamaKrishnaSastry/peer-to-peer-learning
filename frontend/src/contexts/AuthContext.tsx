@@ -6,7 +6,7 @@ import {
   useEffect,
 } from "react";
 import api from "../utils/api";
-import { STORAGE_KEYS } from "../utils/constants";
+import { API_ENDPOINTS, STORAGE_KEYS } from "../utils/constants";
 
 export interface User {
   id: string;
@@ -29,9 +29,16 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
   requestOtp: (email: string) => Promise<string | undefined>;
-  verifyOtp: (email: string, code: string) => Promise<void>;
+  register: (
+    email: string,
+    code: string,
+    password: string,
+    username?: string,
+  ) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  updateUser: (partial: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -62,18 +69,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(newUser);
   };
 
-  const requestOtp = async (email: string): Promise<string | undefined> => {
-    const response = await api.post("/auth/otp/request", { email });
-    return response.data.data?.devOtp;
-  };
-
-  const verifyOtp = async (email: string, code: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await api.post("/auth/otp/verify", { email, code });
+      const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, { email, password });
       const { token: newToken, user: newUser } = response.data.data;
       storeSession(newToken, newUser);
     } catch (error) {
-      console.error("OTP verification failed:", error);
+      console.error("Login failed:", error);
+      throw error;
+    }
+  };
+
+  const requestOtp = async (email: string): Promise<string | undefined> => {
+    const response = await api.post(API_ENDPOINTS.AUTH.REQUEST_OTP, { email });
+    return response.data.data?.devOtp;
+  };
+
+  const register = async (
+    email: string,
+    code: string,
+    password: string,
+    username?: string,
+  ) => {
+    try {
+      const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
+        email,
+        code,
+        password,
+        ...(username ? { username } : {}),
+      });
+      const { token: newToken, user: newUser } = response.data.data;
+      storeSession(newToken, newUser);
+    } catch (error) {
+      console.error("Registration failed:", error);
       throw error;
     }
   };
@@ -87,6 +115,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Google login failed:", error);
       throw error;
     }
+  };
+
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev) => {
+      const next = prev ? { ...prev, ...partial } : prev;
+      if (next) {
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   const logout = () => {
@@ -103,9 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         token,
         isLoading,
         isAuthenticated: !!token,
+        login,
         requestOtp,
-        verifyOtp,
+        register,
         loginWithGoogle,
+        updateUser,
         logout,
       }}
     >

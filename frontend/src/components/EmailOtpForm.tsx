@@ -10,11 +10,13 @@ interface EmailOtpFormProps {
 }
 
 export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
-  const { requestOtp, verifyOtp } = useAuth();
+  const { requestOtp, register } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -59,10 +61,10 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
     setError("");
     setIsLoading(true);
     try {
-      await verifyOtp(email, code);
+      await register(email, code, password, username || undefined);
       navigate(redirectTo);
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Verification failed"));
+      setError(getErrorMessage(err, "Registration failed"));
     } finally {
       setIsLoading(false);
     }
@@ -76,6 +78,23 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
         )}
 
         <div>
+          <label className="block text-gray-700 mb-2">Username (optional)</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value.toLowerCase())}
+            pattern="[a-z0-9_]{3,20}"
+            title="3-20 characters: letters, numbers, or underscores"
+            className="w-full border border-gray-300 rounded px-4 py-2"
+            placeholder="e.g. curious_learner"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            3-20 characters, lowercase letters, numbers, underscores. Leave empty
+            to auto-generate one.
+          </p>
+        </div>
+
+        <div>
           <label className="block text-gray-700 mb-2">Email</label>
           <input
             type="email"
@@ -84,6 +103,19 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
             required
             className="w-full border border-gray-300 rounded px-4 py-2"
             placeholder="your@email.com"
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-700 mb-2">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            className="w-full border border-gray-300 rounded px-4 py-2"
+            placeholder="At least 8 characters"
           />
         </div>
 

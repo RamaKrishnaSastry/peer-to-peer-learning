@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     REQUEST_OTP: '/auth/otp/request',
     VERIFY_OTP: '/auth/otp/verify',
+    LOGIN: '/auth/login',
     GOOGLE: '/auth/google',
     ME: '/auth/me',
   },

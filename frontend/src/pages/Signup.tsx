@@ -24,7 +24,7 @@ export const SignupPage = () => {
     <div className="max-w-md mx-auto mt-8">
       <h1 className="text-3xl font-bold mb-6">Sign Up</h1>
       <p className="text-gray-600 mb-6">
-        Verify your email to create your account — no password needed.
+        Create a password and verify your email to get started.
       </p>
 
       {error && (
