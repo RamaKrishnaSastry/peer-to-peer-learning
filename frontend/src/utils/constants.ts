@@ -39,6 +39,8 @@ export const API_ENDPOINTS = {
     CREATE: '/discussions',
     POST_ANSWER: (id: string) => `/discussions/${id}/answers`,
     COMMENT: (id: string) => `/discussions/${id}/comment`,
+    CLOSE: (id: string) => `/discussions/${id}/close`,
+    REOPEN: (id: string) => `/discussions/${id}/reopen`,
   },
   ANSWERS: {
     UPVOTE: (id: string) => `/answers/${id}/upvote`,

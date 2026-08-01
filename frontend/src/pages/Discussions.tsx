@@ -21,6 +21,7 @@ interface Discussion {
   description: string;
   answerCount: number;
   viewCount: number;
+  isClosed: boolean;
   createdAt: string;
   creator: { id: string; username: string };
   category: { id: number; name: string };
@@ -28,6 +29,7 @@ interface Discussion {
 
 export const DiscussionsPage = () => {
   const [categoryId, setCategoryId] = useState("");
+  const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [newCategoryId, setNewCategoryId] = useState("");
@@ -56,6 +58,7 @@ export const DiscussionsPage = () => {
       setTitle("");
       setDescription("");
       setNewCategoryId("");
+      setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create discussion"));
@@ -66,7 +69,17 @@ export const DiscussionsPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Discussions</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Discussions</h1>
+        {isAuthenticated && (
+          <button
+            onClick={() => setShowForm((open) => !open)}
+            className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            {showForm ? "Cancel" : "+ New Discussion"}
+          </button>
+        )}
+      </div>
 
       <div className="mb-6 flex items-center gap-3">
         <label className="text-gray-700 font-medium">Filter:</label>
@@ -84,7 +97,7 @@ export const DiscussionsPage = () => {
         </select>
       </div>
 
-      {isAuthenticated && (
+      {isAuthenticated && showForm && (
         <form
           onSubmit={handleCreate}
           className="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm"
@@ -153,9 +166,16 @@ export const DiscussionsPage = () => {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-bold text-blue-700 mb-1">
-                    {discussion.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-bold text-blue-700">
+                      {discussion.title}
+                    </h3>
+                    {discussion.isClosed && (
+                      <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded uppercase">
+                        Ended
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-600 line-clamp-2">{discussion.description}</p>
                 </div>
                 <div className="text-right text-sm text-gray-500 shrink-0">

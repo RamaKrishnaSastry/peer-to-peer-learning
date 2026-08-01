@@ -31,6 +31,7 @@ interface ContentItem {
 
 export const ContentPage = () => {
   const [categoryId, setCategoryId] = useState("");
+  const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<string>(CONTENT_TYPES.VIDEO);
@@ -64,6 +65,7 @@ export const ContentPage = () => {
       setDescription("");
       setContentUrl("");
       setNewCategoryId("");
+      setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["content"] });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to upload content"));
@@ -74,7 +76,17 @@ export const ContentPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Learning Content</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Learning Content</h1>
+        {isAuthenticated && (
+          <button
+            onClick={() => setShowForm((open) => !open)}
+            className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            {showForm ? "Cancel" : "+ Share Content"}
+          </button>
+        )}
+      </div>
 
       <div className="mb-6 flex items-center gap-3">
         <label className="text-gray-700 font-medium">Filter:</label>
@@ -92,7 +104,7 @@ export const ContentPage = () => {
         </select>
       </div>
 
-      {isAuthenticated && (
+      {isAuthenticated && showForm && (
         <form
           onSubmit={handleUpload}
           className="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm"
