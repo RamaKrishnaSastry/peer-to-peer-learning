@@ -1,7 +1,7 @@
 import { useFetch } from "../hooks/useFetch";
 import { API_ENDPOINTS } from "../utils/constants";
 import { Loading } from "../components/Loading";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 interface Category {
@@ -17,11 +17,13 @@ export const CategoriesPage = () => {
   const { user } = useAuth();
   const domain = user?.domain;
   const { data: categories, isLoading } = useFetch<Category[]>(
-    ["categories", domain ?? "all"],
+    ["categories", "all"],
     API_ENDPOINTS.CATEGORIES.LIST,
   );
 
-  const visible = domain ? categories?.filter((c) => c.domain === domain) : categories;
+  if (domain) {
+    return <Navigate to={`/categories/${domain.toLowerCase()}`} replace />;
+  }
 
   return (
     <div className="max-w-6xl mx-auto py-8">
@@ -29,7 +31,7 @@ export const CategoriesPage = () => {
 
       <Loading isLoading={isLoading}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {visible?.map((category) => (
+          {categories?.map((category) => (
             <Link
               key={category.id}
               to={`/categories/${category.slug}`}
