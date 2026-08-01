@@ -5,6 +5,7 @@ import { Footer } from "./components/Footer";
 import { Home } from "./pages/Home";
 import { LoginPage } from "./pages/Login";
 import { SignupPage } from "./pages/Signup";
+import { ForgotPasswordPage } from "./pages/ForgotPassword";
 import { CategoriesPage } from "./pages/Categories";
 import { CategoryPage } from "./pages/CategoryPage";
 import { SearchPage } from "./pages/SearchPage";
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/categories/:slug" element={<CategoryPage />} />
             <Route path="/search" element={<SearchPage />} />

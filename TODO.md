@@ -7,6 +7,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 ## Product gaps (from PM review, in priority order)
 - [x] **#1 Search** — backend `GET /api/search` (content/discussions/categories, domain-aware) + navbar search box + results page.
 - [x] **#2 Pagination / load-more** — Content + Discussions pages paginate (Load More) using backend `limit`/`offset`.
+- [x] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
 - [ ] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
 - [ ] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
 - [ ] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak) + page.

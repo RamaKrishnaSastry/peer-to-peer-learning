@@ -201,6 +201,65 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Request a password-reset OTP. Always returns success (no user enumeration);
+// the account is validated at reset time.
+router.post('/forgot-password', async (req: AuthRequest, res: Response) => {
+  try {
+    const { email } = req.body;
+    const { devOtp } = await requestOtp(email);
+    return res.json({
+      success: true,
+      data: { devOtp },
+    });
+  } catch (error: any) {
+    return res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to send reset code',
+    });
+  }
+});
+
+// Verify the reset OTP and set a new password
+router.post('/reset-password', async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!newPassword || !validatePassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters',
+      });
+    }
+
+    await verifyOtp(email, code);
+
+    const normalized = (email as string).trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: normalized } });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'No account found for this email',
+      });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully. You can now login.',
+    });
+  } catch (error: any) {
+    return res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to reset password',
+    });
+  }
+});
+
 // Google OAuth (register or login with a Google ID token)
 router.post('/google', async (req: AuthRequest, res: Response) => {
   try {

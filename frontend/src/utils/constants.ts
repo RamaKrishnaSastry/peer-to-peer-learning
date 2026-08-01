@@ -16,6 +16,8 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     GOOGLE: '/auth/google',
     ME: '/auth/me',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
   },
   CATEGORIES: {
     LIST: '/categories',

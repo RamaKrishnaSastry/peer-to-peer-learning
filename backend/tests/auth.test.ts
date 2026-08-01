@@ -277,4 +277,44 @@ describe('Auth (register via OTP + password, login with password)', () => {
       .send({ username: usernameB });
     expect(update.status).toBe(409);
   });
+
+  test('forgot + reset password flow updates the password', async () => {
+    const email = uniqueEmail('reset');
+    await registerWithOtp(email);
+
+    const sent = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email });
+    expect(sent.status).toBe(200);
+    expect(sent.body.data.devOtp).toBeDefined();
+
+    const newPassword = 'NewSecretPass123';
+    const reset = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ email, code: sent.body.data.devOtp, newPassword });
+    expect(reset.status).toBe(200);
+
+    const oldLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: TEST_PASSWORD });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: newPassword });
+    expect(newLogin.status).toBe(200);
+    expect(newLogin.body.data.token).toBeDefined();
+  });
+
+  test('reset password rejects a short password', async () => {
+    const email = uniqueEmail('resetweak');
+    await registerWithOtp(email);
+    const sent = await request(app).post('/api/auth/forgot-password').send({ email });
+
+    const reset = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ email, code: sent.body.data.devOtp, newPassword: 'short' });
+    expect(reset.status).toBe(400);
+    expect(reset.body.error).toBe('Password must be at least 8 characters');
+  });
 });
