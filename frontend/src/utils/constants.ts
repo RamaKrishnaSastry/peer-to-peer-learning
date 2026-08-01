@@ -40,6 +40,8 @@ export const API_ENDPOINTS = {
     LIST: '/discussions',
     GET: (id: string) => `/discussions/${id}`,
     CREATE: '/discussions',
+    UPDATE: (id: string) => `/discussions/${id}`,
+    DELETE: (id: string) => `/discussions/${id}`,
     POST_ANSWER: (id: string) => `/discussions/${id}/answers`,
     COMMENT: (id: string) => `/discussions/${id}/comment`,
     CLOSE: (id: string) => `/discussions/${id}/close`,

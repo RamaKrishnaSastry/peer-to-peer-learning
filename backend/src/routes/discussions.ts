@@ -177,6 +177,88 @@ router.post('/', writeLimiter, authMiddleware, async (req: AuthRequest, res: Res
   }
 });
 
+// Update a discussion (starter only)
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description } = req.body;
+
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        error: 'Discussion not found',
+      });
+    }
+    if (discussion.creatorId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the discussion starter can edit this discussion',
+      });
+    }
+    if (!title && !description) {
+      return res.status(400).json({
+        success: false,
+        error: 'Provide a title or description to update',
+      });
+    }
+
+    const updated = await prisma.discussion.update({
+      where: { id },
+      data: {
+        ...(title !== undefined && title !== '' ? { title } : {}),
+        ...(description !== undefined && description !== '' ? { description } : {}),
+      },
+      include: {
+        creator: { select: { id: true, username: true } },
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Update discussion error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update discussion',
+    });
+  }
+});
+
+// Delete a discussion (starter only) - cascades answers
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        error: 'Discussion not found',
+      });
+    }
+    if (discussion.creatorId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the discussion starter can delete this discussion',
+      });
+    }
+
+    await prisma.discussion.delete({ where: { id } });
+    await recalculateUserStats(req.userId!);
+
+    return res.json({
+      success: true,
+      data: { id, deleted: true },
+    });
+  } catch (error) {
+    console.error('Delete discussion error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete discussion',
+    });
+  }
+});
+
 // Close a discussion (creator only) so no further answers can be posted
 router.post('/:id/close', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

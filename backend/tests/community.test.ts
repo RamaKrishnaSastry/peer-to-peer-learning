@@ -376,4 +376,51 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const noFile = await request(app).post('/api/uploads').set(uploaderAuth);
     expect(noFile.status).toBe(400);
   });
+
+  test('discussion starter can edit and delete; others cannot', async () => {
+    const owner = await signupAndGetToken(app, 'editowner');
+    const stranger = await signupAndGetToken(app, 'editstranger');
+    const ownerAuth = { Authorization: `Bearer ${owner}` };
+    const strangerAuth = { Authorization: `Bearer ${stranger}` };
+
+    const create = await request(app)
+      .post('/api/discussions')
+      .set(ownerAuth)
+      .send({ title: 'Editable thread', description: 'original description', categoryId });
+    const discussionId = create.body.data.id;
+
+    const edit = await request(app)
+      .put(`/api/discussions/${discussionId}`)
+      .set(ownerAuth)
+      .send({ title: 'Editable thread v2', description: 'updated description' });
+    expect(edit.status).toBe(200);
+    expect(edit.body.data.title).toBe('Editable thread v2');
+    expect(edit.body.data.description).toBe('updated description');
+
+    const forbiddenEdit = await request(app)
+      .put(`/api/discussions/${discussionId}`)
+      .set(strangerAuth)
+      .send({ title: 'Hacked' });
+    expect(forbiddenEdit.status).toBe(403);
+
+    const emptyEdit = await request(app)
+      .put(`/api/discussions/${discussionId}`)
+      .set(ownerAuth)
+      .send({});
+    expect(emptyEdit.status).toBe(400);
+
+    const forbiddenDelete = await request(app)
+      .delete(`/api/discussions/${discussionId}`)
+      .set(strangerAuth);
+    expect(forbiddenDelete.status).toBe(403);
+
+    const deleted = await request(app)
+      .delete(`/api/discussions/${discussionId}`)
+      .set(ownerAuth);
+    expect(deleted.status).toBe(200);
+    expect(deleted.body.data.deleted).toBe(true);
+
+    const gone = await request(app).get(`/api/discussions/${discussionId}`);
+    expect(gone.status).toBe(404);
+  });
 });

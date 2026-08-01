@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFetch } from "../hooks/useFetch";
 import api from "../utils/api";
@@ -41,8 +41,12 @@ export const DiscussionDetailPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [statusError, setStatusError] = useState("");
   const [statusSuccess, setStatusSuccess] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: discussion, isLoading } = useFetch<Discussion>(
     ["discussion", id],
@@ -90,6 +94,42 @@ export const DiscussionDetailPage = () => {
     }
   };
 
+  const startEditing = () => {
+    setEditTitle(discussion?.title ?? "");
+    setEditDescription(discussion?.description ?? "");
+    setStatusError("");
+    setStatusSuccess(false);
+    setEditing(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatusError("");
+    setStatusSuccess(false);
+    try {
+      await api.put(API_ENDPOINTS.DISCUSSIONS.UPDATE(id!), {
+        title: editTitle,
+        description: editDescription,
+      });
+      setEditing(false);
+      setStatusSuccess(true);
+      queryClient.invalidateQueries({ queryKey: ["discussion", id] });
+    } catch (err: unknown) {
+      setStatusError(getErrorMessage(err, "Failed to update discussion"));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this discussion and all its answers? This cannot be undone.")) return;
+    setStatusError("");
+    try {
+      await api.delete(API_ENDPOINTS.DISCUSSIONS.DELETE(id!));
+      navigate("/discussions");
+    } catch (err: unknown) {
+      setStatusError(getErrorMessage(err, "Failed to delete discussion"));
+    }
+  };
+
   const isCreator = isAuthenticated && user?.id === discussion?.creator.id;
 
   return (
@@ -112,16 +152,30 @@ export const DiscussionDetailPage = () => {
                   )}
                 </div>
                 {isCreator && (
-                  <button
-                    onClick={handleToggleClosed}
-                    className={`shrink-0 px-4 py-2 rounded font-semibold border ${
-                      discussion.isClosed
-                        ? "border-green-600 text-green-700 hover:bg-green-50"
-                        : "border-red-600 text-red-700 hover:bg-red-50"
-                    }`}
-                  >
-                    {discussion.isClosed ? "Reopen discussion" : "End discussion"}
-                  </button>
+                  <div className="flex flex-wrap gap-2 justify-end shrink-0">
+                    <button
+                      onClick={handleToggleClosed}
+                      className={`px-4 py-2 rounded font-semibold border ${
+                        discussion.isClosed
+                          ? "border-green-600 text-green-700 hover:bg-green-50"
+                          : "border-red-600 text-red-700 hover:bg-red-50"
+                      }`}
+                    >
+                      {discussion.isClosed ? "Reopen discussion" : "End discussion"}
+                    </button>
+                    <button
+                      onClick={startEditing}
+                      className="px-4 py-2 rounded font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="px-4 py-2 rounded font-semibold bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="flex justify-end -mt-2">
@@ -140,22 +194,66 @@ export const DiscussionDetailPage = () => {
               )}
               {statusSuccess && (
                 <div className="bg-green-100 text-green-700 p-3 rounded mt-3">
-                  {discussion.isClosed
-                    ? "Discussion reopened."
-                    : "Discussion ended."}
+                  {editing
+                    ? "Discussion updated."
+                    : discussion.isClosed
+                      ? "Discussion reopened."
+                      : "Discussion ended."}
                 </div>
               )}
-              <div className="text-sm text-gray-500 mt-3 mb-4">
-                by{" "}
-                <Link
-                  to={`/users/${discussion.creator.username}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {discussion.creator.username}
-                </Link>{" "}
-                · {getTimeAgo(discussion.createdAt)} · {discussion.viewCount} views
-              </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{discussion.description}</p>
+              {editing ? (
+                <form onSubmit={handleEdit} className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-gray-700 mb-2">Title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      required
+                      className="w-full border border-gray-300 rounded px-4 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">Description</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      required
+                      rows={4}
+                      className="w-full border border-gray-300 rounded px-4 py-2"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
+                    >
+                      Save changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(false)}
+                      className="px-6 py-2 rounded font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-500 mt-3 mb-4">
+                    by{" "}
+                    <Link
+                      to={`/users/${discussion.creator.username}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {discussion.creator.username}
+                    </Link>{" "}
+                    · {getTimeAgo(discussion.createdAt)} · {discussion.viewCount} views
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap">{discussion.description}</p>
+                </>
+              )}
               {discussion.isClosed && (
                 <p className="mt-4 bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-600">
                   This discussion has ended by the starter. No more answers can be

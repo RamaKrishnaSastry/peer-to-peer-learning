@@ -12,7 +12,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak, domain filter) + page with tabs and medals.
 - [x] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically (swap to R2/S3 in prod).
 - [x] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
-- [ ] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
+- [x] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
 - [ ] **#9 Follow + bookmarks** — `Follow`/`Bookmark` models, follow button on profiles, bookmark buttons, bookmarks page.
 - [ ] **#10 Subjective/Mains-style questions** — open-ended daily question type + AI essay grading.
 
