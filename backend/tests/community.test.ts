@@ -264,6 +264,12 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     expect(forbidden.status).toBe(404);
   });
 
+  test('security headers from helmet are applied', async () => {
+    const res = await request(app).get('/api/categories');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+  });
+
   test('leaderboard ranks users by reputation and streak', async () => {
     await signupAndGetToken(app, 'lboard');
     const res = await request(app).get('/api/leaderboard');

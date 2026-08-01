@@ -4,6 +4,7 @@ import { authMiddleware, optionalAuth } from '../middleware/auth';
 import prisma from '../db';
 import { recalculateUserStats, awardBadge } from '../services/engagement';
 import { notify } from '../services/notifications';
+import { writeLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -132,7 +133,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Create discussion
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/', writeLimiter, authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, categoryId } = req.body;
 

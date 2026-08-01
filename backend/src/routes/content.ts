@@ -5,6 +5,7 @@ import prisma from '../db';
 import { toggleVote } from '../services/votes';
 import { recalculateUserStats } from '../services/engagement';
 import { notify } from '../services/notifications';
+import { writeLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -163,7 +164,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Upload content
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/', writeLimiter, authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, type, contentUrl, categoryId } = req.body;
 

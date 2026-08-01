@@ -12,6 +12,7 @@ import { requestOtp, verifyOtp } from '../services/otp';
 import prisma from '../db';
 import { getStatsWithStreak } from '../services/engagement';
 import { authMiddleware } from '../middleware/auth';
+import { authLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
@@ -42,7 +43,7 @@ const generateUniqueUsername = async (email: string): Promise<string> => {
 };
 
 // Request an email OTP (dev: code is logged to the console and echoed back)
-router.post('/otp/request', async (req: AuthRequest, res: Response) => {
+router.post('/otp/request', authLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { email } = req.body;
     const { devOtp } = await requestOtp(email);
@@ -159,7 +160,7 @@ router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
 });
 
 // Login with the password chosen at registration (accepts email or username)
-router.post('/login', async (req: AuthRequest, res: Response) => {
+router.post('/login', authLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -203,7 +204,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
 
 // Request a password-reset OTP. Always returns success (no user enumeration);
 // the account is validated at reset time.
-router.post('/forgot-password', async (req: AuthRequest, res: Response) => {
+router.post('/forgot-password', authLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { email } = req.body;
     const { devOtp } = await requestOtp(email);
@@ -220,7 +221,7 @@ router.post('/forgot-password', async (req: AuthRequest, res: Response) => {
 });
 
 // Verify the reset OTP and set a new password
-router.post('/reset-password', async (req: AuthRequest, res: Response) => {
+router.post('/reset-password', authLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { email, code, newPassword } = req.body;
 

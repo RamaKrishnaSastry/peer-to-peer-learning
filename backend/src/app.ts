@@ -1,5 +1,6 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 
 // Routes
@@ -17,6 +18,7 @@ import leaderboardRoutes from './routes/leaderboard';
 
 // Middleware
 import { errorHandler, corsOptions } from './middleware/auth';
+import { apiLimiter } from './middleware/rateLimiter';
 import { logger } from './utils/logger';
 
 dotenv.config();
@@ -24,6 +26,7 @@ dotenv.config();
 export const createApp = (): Express => {
   const app: Express = express();
 
+  app.use(helmet());
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -43,7 +46,8 @@ export const createApp = (): Express => {
     });
   });
 
-  // API Routes
+  // API Routes (general rate limit guards all API traffic)
+  app.use('/api', apiLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/categories', categoryRoutes);
   app.use('/api/content', contentRoutes);

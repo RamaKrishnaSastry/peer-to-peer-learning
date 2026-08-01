@@ -17,8 +17,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] **#10 Subjective/Mains-style questions** — open-ended daily question type + AI essay grading.
 
 ## Backend hardening (implementation-layer review)
-- [ ] **Rate limiting** (`express-rate-limit`) — at minimum on OTP request, login (brute-force), and content/discussion creation. None exists today.
-- [ ] **Security headers** — `helmet()` in `app.ts` (X-Content-Type-Options, X-Frame-Options, CSP, etc.).
+- [x] **Rate limiting** (`express-rate-limit`) — general API limiter (600/15min), auth limiter on OTP/login/reset (20/15min), write limiter on content/discussion creation (60/15min). Disabled under NODE_ENV=test.
+- [x] **Security headers** — `helmet()` in `app.ts` (X-Content-Type-Options, X-Frame-Options, CSP, etc.).
 - [ ] **Request validation layer** — Zod/Joi/express-validator instead of per-route `if (!x)`. Audit less-visited routes (URL format on `POST /content`, answer length cap, etc.).
 - [ ] **API versioning** — mount routes under `/api/v1/` before any external client depends on the API.
 - [ ] **Soft-delete / audit trail** — `deletedAt` on comments/content so moderation disputes have an evidence trail.
