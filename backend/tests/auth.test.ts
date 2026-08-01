@@ -12,7 +12,7 @@ const registerWithOtp = async (email: string, password = TEST_PASSWORD) => {
   const sent = await requestOtp(email);
   return request(app)
     .post('/api/auth/otp/verify')
-    .send({ email, code: sent.body.data.devOtp, password });
+    .send({ email, code: sent.body.data.devOtp, password, domain: 'UPSC' });
 };
 
 describe('Auth (register via OTP + password, login with password)', () => {
@@ -25,7 +25,7 @@ describe('Auth (register via OTP + password, login with password)', () => {
 
     const registered = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD });
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, domain: 'UPSC' });
     expect(registered.status).toBe(200);
     expect(registered.body.success).toBe(true);
     expect(registered.body.data.token).toBeDefined();
@@ -42,6 +42,49 @@ describe('Auth (register via OTP + password, login with password)', () => {
     expect(me.body.data.stats.currentStreak).toBe(0);
   });
 
+  test('register requires a valid exam domain', async () => {
+    const email = uniqueEmail('nodomain');
+    const sent = await requestOtp(email);
+
+    const missing = await request(app)
+      .post('/api/auth/otp/verify')
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error).toMatch(/exam domain/i);
+
+    const invalid = await request(app)
+      .post('/api/auth/otp/verify')
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, domain: 'SSC' });
+    expect(invalid.status).toBe(400);
+  });
+
+  test('registered user keeps their chosen domain and can change it', async () => {
+    const email = uniqueEmail('domain');
+    const registered = await registerWithOtp(email);
+    const token = registered.body.data.token;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    expect(registered.body.data.user.domain).toBe('UPSC');
+    const me = await request(app).get('/api/auth/me').set(auth);
+    expect(me.body.data.domain).toBe('UPSC');
+
+    const update = await request(app)
+      .put('/api/users/me')
+      .set(auth)
+      .send({ domain: 'Finance' });
+    expect(update.status).toBe(200);
+    expect(update.body.data.domain).toBe('Finance');
+
+    const after = await request(app).get('/api/auth/me').set(auth);
+    expect(after.body.data.domain).toBe('Finance');
+
+    const bad = await request(app)
+      .put('/api/users/me')
+      .set(auth)
+      .send({ domain: 'SSC' });
+    expect(bad.status).toBe(400);
+  });
+
   test('register rejects a short password', async () => {
     const email = uniqueEmail('weak');
     const res = await registerWithOtp(email, 'short');
@@ -54,7 +97,7 @@ describe('Auth (register via OTP + password, login with password)', () => {
     const sent = await requestOtp(email);
     const res = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'my_handle' });
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'my_handle', domain: 'UPSC' });
     expect(res.status).toBe(200);
     expect(res.body.data.user.username).toBe('my_handle');
   });
@@ -64,13 +107,13 @@ describe('Auth (register via OTP + password, login with password)', () => {
     const sent = await requestOtp(email);
     await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'first_handle' });
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'first_handle', domain: 'UPSC' });
 
     const other = uniqueEmail('second');
     const sent2 = await requestOtp(other);
     const res = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email: other, code: sent2.body.data.devOtp, password: TEST_PASSWORD, username: 'first_handle' });
+      .send({ email: other, code: sent2.body.data.devOtp, password: TEST_PASSWORD, username: 'first_handle', domain: 'UPSC' });
     expect(res.status).toBe(409);
   });
 
@@ -79,7 +122,7 @@ describe('Auth (register via OTP + password, login with password)', () => {
     const sent = await requestOtp(email);
     const res = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'Bad Name!' });
+      .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, username: 'Bad Name!', domain: 'UPSC' });
     expect(res.status).toBe(400);
   });
 
@@ -94,7 +137,7 @@ describe('Auth (register via OTP + password, login with password)', () => {
 
     const res = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code: '000000', password: TEST_PASSWORD });
+      .send({ email, code: '000000', password: TEST_PASSWORD, domain: 'UPSC' });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('Incorrect verification code');
   });
@@ -106,12 +149,12 @@ describe('Auth (register via OTP + password, login with password)', () => {
 
     const first = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code, password: TEST_PASSWORD });
+      .send({ email, code, password: TEST_PASSWORD, domain: 'UPSC' });
     expect(first.status).toBe(200);
 
     const second = await request(app)
       .post('/api/auth/otp/verify')
-      .send({ email, code, password: TEST_PASSWORD });
+      .send({ email, code, password: TEST_PASSWORD, domain: 'UPSC' });
     expect(second.status).toBe(400);
   });
 

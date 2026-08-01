@@ -170,4 +170,23 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     expect(me.body.data.stats.upvotesReceived).toBeGreaterThanOrEqual(1);
     expect(me.body.data.stats.reputationScore).toBeGreaterThan(0);
   });
+
+  test('content and discussions are filterable by exam domain', async () => {
+    const domain = (await request(app).get('/api/auth/me').set(auth)).body.data.domain;
+    expect(domain).toBe('UPSC');
+
+    const upsc = await request(app).get('/api/content?domain=UPSC');
+    expect(upsc.status).toBe(200);
+    expect(upsc.body.data.some((c: any) => c.title === 'Test notes')).toBe(true);
+
+    const jee = await request(app).get('/api/content?domain=JEE');
+    expect(jee.body.data.some((c: any) => c.title === 'Test notes')).toBe(false);
+
+    const upscDisc = await request(app).get('/api/discussions?domain=UPSC');
+    expect(upscDisc.status).toBe(200);
+    expect(upscDisc.body.data.some((d: any) => d.title === 'How does P/E ratio work?')).toBe(true);
+
+    const jeeDisc = await request(app).get('/api/discussions?domain=JEE');
+    expect(jeeDisc.body.data.some((d: any) => d.title === 'How does P/E ratio work?')).toBe(false);
+  });
 });

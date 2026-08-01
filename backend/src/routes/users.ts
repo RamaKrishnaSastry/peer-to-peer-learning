@@ -35,6 +35,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
         username: user.username,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
+        domain: user.domain,
         verified: user.verified,
         createdAt: user.createdAt,
         stats,
@@ -53,7 +54,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 // Update current user profile
 router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { bio, avatarUrl, username } = req.body;
+    const { bio, avatarUrl, username, domain } = req.body;
 
     let newUsername: string | undefined;
     if (username !== undefined) {
@@ -75,6 +76,18 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const VALID_DOMAINS = ['UPSC', 'JEE', 'Finance'];
+    let newDomain: string | undefined;
+    if (domain !== undefined) {
+      if (!VALID_DOMAINS.includes(domain)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid domain. Choose UPSC, JEE, or Finance',
+        });
+      }
+      newDomain = domain;
+    }
+
     let user;
     try {
       user = await prisma.user.update({
@@ -83,6 +96,7 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
           ...(username !== undefined ? { username: newUsername } : {}),
           ...(bio !== undefined ? { bio } : {}),
           ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+          ...(domain !== undefined ? { domain: newDomain } : {}),
         },
       });
     } catch (error: any) {
@@ -103,6 +117,7 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
         username: user.username,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
+        domain: user.domain,
       },
     });
   } catch (error) {
@@ -143,6 +158,7 @@ router.get('/:username', async (req: AuthRequest, res: Response) => {
         username: user.username,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
+        domain: user.domain,
         verified: user.verified,
         createdAt: user.createdAt,
         stats,

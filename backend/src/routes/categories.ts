@@ -24,10 +24,14 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
   }
 });
 
-// Get all categories flattened (for cascading selects)
-router.get('/all', async (_req: AuthRequest, res: Response) => {
+// Get all categories flattened (for cascading selects), optionally by domain
+router.get('/all', async (req: AuthRequest, res: Response) => {
   try {
-    const all = await prisma.category.findMany({ orderBy: { id: 'asc' } });
+    const { domain } = req.query;
+    const all = await prisma.category.findMany({
+      where: domain ? { domain: domain as string } : {},
+      orderBy: { id: 'asc' },
+    });
     return res.json({
       success: true,
       data: all,

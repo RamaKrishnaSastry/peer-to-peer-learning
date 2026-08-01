@@ -17,7 +17,7 @@ export const signupAndGetToken = async (app: Express, prefix = 'user') => {
   }
   const verified = await request(app)
     .post('/api/auth/otp/verify')
-    .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD });
+    .send({ email, code: sent.body.data.devOtp, password: TEST_PASSWORD, domain: 'UPSC' });
   if (verified.status !== 200) {
     throw new Error(`OTP verify failed: ${verified.status} ${JSON.stringify(verified.body)}`);
   }

@@ -9,11 +9,14 @@ const router = Router();
 // List discussions with pagination + sorting
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { categoryId, sort = 'newest' } = req.query;
+    const { categoryId, sort = 'newest', domain } = req.query;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    const where = categoryId ? { categoryId: parseInt(categoryId as string) } : {};
+    const where = {
+      ...(categoryId ? { categoryId: parseInt(categoryId as string) } : {}),
+      ...(domain ? { category: { domain: domain as string } } : {}),
+    };
 
     const orderBy =
       sort === 'top'

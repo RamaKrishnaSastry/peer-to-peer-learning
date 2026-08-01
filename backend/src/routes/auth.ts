@@ -62,12 +62,20 @@ router.post('/otp/request', async (req: AuthRequest, res: Response) => {
 // OTP is used only for registration; login is password-based.
 router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, code, password, username } = req.body;
+    const { email, code, password, username, domain } = req.body;
 
     if (!password || !validatePassword(password)) {
       return res.status(400).json({
         success: false,
         error: 'Password must be at least 8 characters',
+      });
+    }
+
+    const VALID_DOMAINS = ['UPSC', 'JEE', 'Finance'];
+    if (!domain || !VALID_DOMAINS.includes(domain)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please select a valid exam domain (UPSC, JEE, or Finance)',
       });
     }
 
@@ -116,6 +124,7 @@ router.post('/otp/verify', async (req: AuthRequest, res: Response) => {
             email: normalized,
             username: finalUsername,
             password: hashedPassword,
+            domain,
             verified: true,
           },
         });

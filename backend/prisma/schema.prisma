@@ -15,6 +15,7 @@ model User {
   googleId  String?  @unique
   bio       String?
   avatarUrl String?
+  domain    String? // UPSC, JEE, Finance
   verified  Boolean  @default(false)
 
   // Relations
