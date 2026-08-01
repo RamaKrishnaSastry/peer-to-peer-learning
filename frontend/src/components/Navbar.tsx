@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/daily", label: "Daily" },
   { to: "/discussions", label: "Discussions" },
   { to: "/content", label: "Content" },
+  { to: "/leaderboard", label: "Leaderboard" },
 ];
 
 export const Navbar = () => {

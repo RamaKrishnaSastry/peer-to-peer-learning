@@ -18,6 +18,7 @@ import { ProfilePage } from "./pages/Profile";
 import { SettingsPage } from "./pages/Settings";
 import { UserProfilePage } from "./pages/UserProfile";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/users/:username" element={<UserProfilePage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
           </Routes>
         </main>
 

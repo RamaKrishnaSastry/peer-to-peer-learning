@@ -263,4 +263,25 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
       .set('Authorization', `Bearer ${stranger}`);
     expect(forbidden.status).toBe(404);
   });
+
+  test('leaderboard ranks users by reputation and streak', async () => {
+    await signupAndGetToken(app, 'lboard');
+    const res = await request(app).get('/api/leaderboard');
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data[0]).toHaveProperty('username');
+    expect(res.body.data[0]).toHaveProperty('stats');
+    expect(res.body.data[0].stats).toHaveProperty('reputationScore');
+
+    const reps = res.body.data.map((u: any) => u.stats.reputationScore);
+    expect([...reps].sort((a: number, b: number) => b - a)).toEqual(reps);
+
+    const streak = await request(app).get('/api/leaderboard?type=streak');
+    expect(streak.status).toBe(200);
+    expect(streak.body.data.length).toBeGreaterThan(0);
+    expect(streak.body.data[0].stats).toHaveProperty('currentStreak');
+
+    const domain = await request(app).get('/api/leaderboard?domain=JEE');
+    expect(domain.status).toBe(200);
+  });
 });

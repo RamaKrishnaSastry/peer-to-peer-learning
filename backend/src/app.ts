@@ -13,6 +13,7 @@ import userRoutes from './routes/users';
 import dailyQuestionRoutes from './routes/dailyQuestions';
 import searchRoutes from './routes/search';
 import notificationRoutes from './routes/notifications';
+import leaderboardRoutes from './routes/leaderboard';
 
 // Middleware
 import { errorHandler, corsOptions } from './middleware/auth';
@@ -53,6 +54,7 @@ export const createApp = (): Express => {
   app.use('/api/daily-questions', dailyQuestionRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/leaderboard', leaderboardRoutes);
 
   // 404 handler
   app.use((_req: Request, res: Response) => {

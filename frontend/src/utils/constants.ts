@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
     SUBMIT: (id: string) => `/daily-questions/${id}/submit`,
   },
   SEARCH: '/search',
+  LEADERBOARD: '/leaderboard',
   NOTIFICATIONS: {
     LIST: '/notifications',
     READ_ALL: '/notifications/read-all',
