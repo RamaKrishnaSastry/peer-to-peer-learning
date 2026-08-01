@@ -18,12 +18,13 @@ interface CategorySelectProps {
   value: string;
   onChange: (categoryId: string) => void;
   className?: string;
+  domain?: string;
 }
 
-export const CategorySelect = ({ value, onChange, className }: CategorySelectProps) => {
+export const CategorySelect = ({ value, onChange, className, domain }: CategorySelectProps) => {
   const { data: categories } = useFetch<CategoryNode[]>(
-    ["categories", "all"],
-    API_ENDPOINTS.CATEGORIES.ALL,
+    ["categories", "all", domain ?? "all"],
+    `${API_ENDPOINTS.CATEGORIES.ALL}${domain ? `?domain=${domain}` : ""}`,
   );
   const [pathIds, setPathIds] = useState<(number | null)[]>([]);
 

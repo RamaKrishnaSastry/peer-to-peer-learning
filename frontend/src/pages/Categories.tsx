@@ -2,6 +2,7 @@ import { useFetch } from "../hooks/useFetch";
 import { API_ENDPOINTS } from "../utils/constants";
 import { Loading } from "../components/Loading";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Category {
   id: number;
@@ -13,10 +14,14 @@ interface Category {
 }
 
 export const CategoriesPage = () => {
+  const { user } = useAuth();
+  const domain = user?.domain;
   const { data: categories, isLoading } = useFetch<Category[]>(
-    ["categories"],
+    ["categories", domain ?? "all"],
     API_ENDPOINTS.CATEGORIES.LIST,
   );
+
+  const visible = domain ? categories?.filter((c) => c.domain === domain) : categories;
 
   return (
     <div className="max-w-6xl mx-auto py-8">
@@ -24,7 +29,7 @@ export const CategoriesPage = () => {
 
       <Loading isLoading={isLoading}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {categories?.map((category) => (
+          {visible?.map((category) => (
             <Link
               key={category.id}
               to={`/categories/${category.slug}`}

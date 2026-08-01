@@ -15,6 +15,7 @@ interface Me {
   email: string;
   bio: string | null;
   avatarUrl: string | null;
+  domain?: string | null;
 }
 
 export const SettingsPage = () => {
@@ -62,6 +63,16 @@ export const SettingsPage = () => {
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <h2 className="font-semibold mb-3">Profile</h2>
               <ProfileForm initialBio={me.bio} initialAvatarUrl={me.avatarUrl} />
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <h2 className="font-semibold mb-1">Exam domain</h2>
+              <p className="text-sm text-gray-500 mb-3">
+                {me.domain
+                  ? "Your feed is scoped to this exam. Change it anytime."
+                  : "You currently see everything. Pick an exam to scope your feed to it."}
+              </p>
+              <DomainForm initialDomain={me.domain} />
             </div>
           </div>
         ) : (
@@ -140,6 +151,87 @@ const ProfileForm = ({
         className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 disabled:bg-gray-400"
       >
         {submitting ? "Saving..." : "Save Profile"}
+      </button>
+    </form>
+  );
+};
+
+const DOMAIN_OPTIONS = [
+  { value: "UPSC", emoji: "🏛️", desc: "Civil Services" },
+  { value: "JEE", emoji: "⚙️", desc: "Engineering" },
+  { value: "Finance", emoji: "📈", desc: "Markets & Investing" },
+];
+
+const DomainForm = ({ initialDomain }: { initialDomain?: string | null }) => {
+  const { updateUser } = useAuth();
+  const [domain, setDomain] = useState(initialDomain ?? "");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!domain) {
+      setError("Select an exam domain.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    setSuccess(false);
+    try {
+      const response = await api.put(API_ENDPOINTS.USERS.UPDATE_ME, { domain });
+      updateUser({ domain: response.data.data.domain });
+      setSuccess(true);
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to update exam domain"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        {DOMAIN_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              setDomain(option.value);
+              setSuccess(false);
+            }}
+            className={`border-2 rounded-lg py-3 px-2 text-center transition ${
+              domain === option.value
+                ? "border-blue-600 bg-blue-50"
+                : "border-gray-300 hover:border-blue-400"
+            }`}
+          >
+            <div className="text-2xl">{option.emoji}</div>
+            <div
+              className={`font-bold text-sm ${
+                domain === option.value ? "text-blue-700" : "text-gray-700"
+              }`}
+            >
+              {option.value}
+            </div>
+            <div className="text-xs text-gray-500">{option.desc}</div>
+          </button>
+        ))}
+      </div>
+      {error && <div className="bg-red-100 text-red-700 p-4 rounded">{error}</div>}
+      {success && (
+        <div className="bg-green-100 text-green-700 p-4 rounded">
+          Exam domain saved. Your feed is now scoped to {domain}.
+        </div>
+      )}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 disabled:bg-gray-400"
+      >
+        {submitting ? "Saving..." : "Save Exam Domain"}
       </button>
     </form>
   );

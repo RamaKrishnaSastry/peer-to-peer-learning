@@ -14,6 +14,7 @@ export interface User {
   username: string;
   bio?: string;
   avatarUrl?: string;
+  domain?: string;
   stats?: {
     reputationScore: number;
     upvotesReceived: number;
@@ -35,7 +36,8 @@ interface AuthContextType {
     email: string,
     code: string,
     password: string,
-    username?: string,
+    username: string | undefined,
+    domain: string,
   ) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   updateUser: (partial: Partial<User>) => void;
@@ -89,13 +91,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string,
     code: string,
     password: string,
-    username?: string,
+    username: string | undefined,
+    domain: string,
   ) => {
     try {
       const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
         email,
         code,
         password,
+        domain,
         ...(username ? { username } : {}),
       });
       const { token: newToken, user: newUser } = response.data.data;

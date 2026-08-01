@@ -32,15 +32,17 @@ export const DiscussionsPage = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const domain = user?.domain;
   const queryClient = useQueryClient();
 
   const params = new URLSearchParams();
   params.set("sort", sort);
   if (categoryId) params.set("categoryId", categoryId);
+  if (domain) params.set("domain", domain);
 
   const { data: discussions, isLoading } = useFetch<Discussion[]>(
-    ["discussions", categoryId, sort],
+    ["discussions", categoryId, sort, domain ?? "all"],
     `${API_ENDPOINTS.DISCUSSIONS.LIST}?${params.toString()}`,
   );
 
@@ -92,7 +94,7 @@ export const DiscussionsPage = () => {
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-3 mb-3">
           <span className="text-gray-700 font-medium">Filter:</span>
-          <CategorySelect value={categoryId} onChange={setCategoryId} />
+          <CategorySelect value={categoryId} onChange={setCategoryId} domain={domain} />
         </div>
         <div className="flex items-center gap-3">
           <label className="text-gray-700 font-medium">Sort:</label>
@@ -141,7 +143,7 @@ export const DiscussionsPage = () => {
             </div>
             <div>
               <label className="block text-gray-700 mb-2">Category</label>
-              <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" />
+              <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" domain={domain} />
             </div>
             <button
               type="submit"

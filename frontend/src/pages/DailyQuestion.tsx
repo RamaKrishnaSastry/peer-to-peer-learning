@@ -33,17 +33,20 @@ interface Question {
 const TYPES = ["UPSC", "JEE", "Finance"] as const;
 
 export const DailyQuestionPage = () => {
-  const [activeType, setActiveType] = useState<string>("UPSC");
+  const { isAuthenticated, user } = useAuth();
+  const domain = user?.domain;
+  const [activeType, setActiveType] = useState<string>(domain ?? "UPSC");
   const [selected, setSelected] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [streak, setStreak] = useState<number | null>(null);
-  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
+  const activeDomain = domain ?? activeType;
+
   const { data: question, isLoading } = useFetch<Question>(
-    ["daily-question", activeType],
-    API_ENDPOINTS.DAILY_QUESTIONS.TODAY(activeType),
+    ["daily-question", activeDomain],
+    API_ENDPOINTS.DAILY_QUESTIONS.TODAY(activeDomain),
   );
 
   const selectType = (type: string) => {
@@ -62,7 +65,7 @@ export const DailyQuestionPage = () => {
         { selectedAnswer: selected },
       );
       setStreak(response.data.data.streak.currentStreak);
-      queryClient.invalidateQueries({ queryKey: ["daily-question", activeType] });
+      queryClient.invalidateQueries({ queryKey: ["daily-question", activeDomain] });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to submit answer"));
     } finally {
@@ -99,19 +102,21 @@ export const DailyQuestionPage = () => {
       </div>
 
       <div className="flex space-x-2 mb-6">
-        {TYPES.map((type) => (
-          <button
-            key={type}
-            onClick={() => selectType(type)}
-            className={`px-4 py-2 rounded font-semibold ${
-              activeType === type
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            {type}
-          </button>
-        ))}
+        {domain
+          ? <span className="px-4 py-2 rounded font-semibold bg-blue-600 text-white">{domain}</span>
+          : TYPES.map((type) => (
+              <button
+                key={type}
+                onClick={() => selectType(type)}
+                className={`px-4 py-2 rounded font-semibold ${
+                  activeType === type
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
       </div>
 
       {error && (

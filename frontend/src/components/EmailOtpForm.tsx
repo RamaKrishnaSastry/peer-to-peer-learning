@@ -5,6 +5,12 @@ import { getErrorMessage } from "../utils/helpers";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
+const DOMAIN_OPTIONS = [
+  { value: "UPSC", emoji: "🏛️", desc: "Civil Services" },
+  { value: "JEE", emoji: "⚙️", desc: "Engineering" },
+  { value: "Finance", emoji: "📈", desc: "Markets & Investing" },
+];
+
 interface EmailOtpFormProps {
   redirectTo?: string;
 }
@@ -17,6 +23,7 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [domain, setDomain] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +38,10 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
 
   const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!domain) {
+      setError("Please select the exam you're preparing for.");
+      return;
+    }
     setError("");
     setIsLoading(true);
     try {
@@ -61,7 +72,7 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
     setError("");
     setIsLoading(true);
     try {
-      await register(email, code, password, username || undefined);
+      await register(email, code, password, username || undefined, domain);
       navigate(redirectTo);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Registration failed"));
@@ -119,9 +130,43 @@ export const EmailOtpForm = ({ redirectTo = "/" }: EmailOtpFormProps) => {
           />
         </div>
 
+        <div>
+          <label className="block text-gray-700 mb-2">
+            Which exam are you preparing for? <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {DOMAIN_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setDomain(option.value)}
+                className={`border-2 rounded-lg py-3 px-2 text-center transition ${
+                  domain === option.value
+                    ? "border-blue-600 bg-blue-50"
+                    : "border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                <div className="text-2xl">{option.emoji}</div>
+                <div
+                  className={`font-bold text-sm ${
+                    domain === option.value ? "text-blue-700" : "text-gray-700"
+                  }`}
+                >
+                  {option.value}
+                </div>
+                <div className="text-xs text-gray-500">{option.desc}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Your feed will be scoped to this domain. You can change it anytime in
+            Settings.
+          </p>
+        </div>
+
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !domain}
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
         >
           {isLoading ? "Sending code..." : "Send verification code"}
