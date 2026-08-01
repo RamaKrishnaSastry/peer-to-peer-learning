@@ -7,13 +7,8 @@ import { API_ENDPOINTS } from "../utils/constants";
 import { getErrorMessage } from "../utils/helpers";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  domain: string;
-}
+import { CategorySelect } from "../components/CategorySelect";
+import { Avatar } from "../components/Avatar";
 
 interface Discussion {
   id: string;
@@ -29,19 +24,24 @@ interface Discussion {
 
 export const DiscussionsPage = () => {
   const [categoryId, setCategoryId] = useState("");
+  const [sort, setSort] = useState("newest");
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [newCategoryId, setNewCategoryId] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: categories } = useFetch<Category[]>(["categories"], API_ENDPOINTS.CATEGORIES.LIST);
+  const params = new URLSearchParams();
+  params.set("sort", sort);
+  if (categoryId) params.set("categoryId", categoryId);
+
   const { data: discussions, isLoading } = useFetch<Discussion[]>(
-    ["discussions", categoryId],
-    `${API_ENDPOINTS.DISCUSSIONS.LIST}${categoryId ? `?categoryId=${categoryId}` : ""}`,
+    ["discussions", categoryId, sort],
+    `${API_ENDPOINTS.DISCUSSIONS.LIST}?${params.toString()}`,
   );
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -49,6 +49,7 @@ export const DiscussionsPage = () => {
     if (!title || !description || !newCategoryId) return;
     setSubmitting(true);
     setError("");
+    setSuccess(false);
     try {
       await api.post(API_ENDPOINTS.DISCUSSIONS.CREATE, {
         title,
@@ -59,6 +60,7 @@ export const DiscussionsPage = () => {
       setDescription("");
       setNewCategoryId("");
       setShowForm(false);
+      setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["discussions"] });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create discussion"));
@@ -81,20 +83,28 @@ export const DiscussionsPage = () => {
         )}
       </div>
 
-      <div className="mb-6 flex items-center gap-3">
-        <label className="text-gray-700 font-medium">Filter:</label>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2"
-        >
-          <option value="">All categories</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      {success && (
+        <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
+          Discussion posted successfully.
+        </div>
+      )}
+
+      <div className="mb-6">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <span className="text-gray-700 font-medium">Filter:</span>
+          <CategorySelect value={categoryId} onChange={setCategoryId} />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-gray-700 font-medium">Sort:</label>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="newest">Newest</option>
+            <option value="top">Most answered</option>
+          </select>
+        </div>
       </div>
 
       {isAuthenticated && showForm && (
@@ -131,19 +141,7 @@ export const DiscussionsPage = () => {
             </div>
             <div>
               <label className="block text-gray-700 mb-2">Category</label>
-              <select
-                value={newCategoryId}
-                onChange={(e) => setNewCategoryId(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded px-4 py-2"
-              >
-                <option value="">Select a category</option>
-                {categories?.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" />
             </div>
             <button
               type="submit"
@@ -183,22 +181,37 @@ export const DiscussionsPage = () => {
                   <div>{discussion.viewCount} views</div>
                 </div>
               </div>
-              <div className="mt-3 text-sm text-gray-500">
-                by{" "}
-                <Link
-                  to={`/users/${discussion.creator.username}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {discussion.creator.username}
-                </Link>{" "}
-                in {discussion.category.name}
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                <Avatar name={discussion.creator.username} className="w-6 h-6 text-xs" />
+                <span>
+                  by{" "}
+                  <Link
+                    to={`/users/${discussion.creator.username}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {discussion.creator.username}
+                  </Link>
+                </span>
+                <span>in {discussion.category.name}</span>
               </div>
             </Link>
           ))}
           {discussions?.length === 0 && (
-            <p className="text-center text-gray-500 py-10">
-              No discussions yet. Start one above!
-            </p>
+            <div className="text-center text-gray-500 py-10">
+              <p className="mb-4">No discussions yet.</p>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700"
+                >
+                  Start the first discussion
+                </button>
+              ) : (
+                <Link to="/login" className="text-blue-600 hover:underline">
+                  Login to start a discussion
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </Loading>

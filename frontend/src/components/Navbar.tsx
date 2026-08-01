@@ -1,29 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { Avatar } from "./Avatar";
 
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-orange-500",
-  "bg-pink-500",
-  "bg-teal-500",
-  "bg-indigo-500",
-  "bg-rose-500",
+const NAV_ITEMS = [
+  { to: "/categories", label: "Browse" },
+  { to: "/daily", label: "Daily" },
+  { to: "/discussions", label: "Discussions" },
+  { to: "/content", label: "Content" },
 ];
-
-const avatarColorFor = (name: string): string => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-};
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -39,11 +29,17 @@ export const Navbar = () => {
 
   const handleLogout = () => {
     setMenuOpen(false);
+    setMobileOpen(false);
     if (window.confirm("Are you sure you want to sign out?")) {
       logout();
       navigate("/");
     }
   };
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `text-sm font-medium ${
+      isActive ? "text-blue-600 font-semibold" : "text-gray-700 hover:text-blue-600"
+    }`;
 
   return (
     <nav className="bg-white shadow-md">
@@ -53,18 +49,13 @@ export const Navbar = () => {
             <Link to="/" className="text-2xl font-bold text-blue-600">
               Peer Learning
             </Link>
-            <Link to="/daily" className="text-gray-700 hover:text-blue-600">
-              Daily
-            </Link>
-            <Link to="/discussions" className="text-gray-700 hover:text-blue-600">
-              Discussions
-            </Link>
-            <Link to="/content" className="text-gray-700 hover:text-blue-600">
-              Content
-            </Link>
-            <Link to="/categories" className="text-gray-700 hover:text-blue-600">
-              Browse
-            </Link>
+            <div className="hidden md:flex items-center space-x-5">
+              {NAV_ITEMS.map((item) => (
+                <NavLink key={item.to} to={item.to} className={navLinkClass}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -72,15 +63,14 @@ export const Navbar = () => {
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((open) => !open)}
-                  className={`w-10 h-10 rounded-full text-white font-bold flex items-center justify-center ${avatarColorFor(user.username)}`}
                   aria-label="Account menu"
                   aria-expanded={menuOpen}
                 >
-                  {user.username.charAt(0).toUpperCase()}
+                  <Avatar name={user.username} />
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20">
                     <Link
                       to="/profile"
                       onClick={() => setMenuOpen(false)}
@@ -106,7 +96,7 @@ export const Navbar = () => {
                 )}
               </div>
             ) : (
-              <>
+              <div className="hidden md:flex items-center space-x-4">
                 <Link to="/login" className="text-gray-700 hover:text-blue-600">
                   Login
                 </Link>
@@ -116,11 +106,77 @@ export const Navbar = () => {
                 >
                   Sign Up
                 </Link>
-              </>
+              </div>
             )}
+
+            <button
+              onClick={() => setMobileOpen((open) => !open)}
+              className="md:hidden p-2 text-gray-700 hover:text-blue-600"
+              aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
       </div>
+
+      {mobileOpen && (
+        <div className="md:hidden border-t border-gray-200 bg-white">
+          <div className="px-4 py-3 space-y-1">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `block px-3 py-2 rounded text-sm font-medium ${
+                    isActive
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            {!isAuthenticated && (
+              <div className="pt-2 mt-2 border-t border-gray-200 space-y-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-3 py-2 rounded text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-3 py-2 rounded text-sm bg-blue-600 text-white text-center hover:bg-blue-700"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

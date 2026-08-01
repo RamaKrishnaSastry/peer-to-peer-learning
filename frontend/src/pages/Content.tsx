@@ -4,22 +4,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFetch } from "../hooks/useFetch";
 import api from "../utils/api";
 import { API_ENDPOINTS, CONTENT_TYPES } from "../utils/constants";
-import { getErrorMessage } from "../utils/helpers";
+import { getErrorMessage, getYouTubeThumbnail } from "../utils/helpers";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  domain: string;
-}
+import { CategorySelect } from "../components/CategorySelect";
+import { Avatar } from "../components/Avatar";
 
 interface ContentItem {
   id: string;
   title: string;
   description: string;
   type: string;
+  contentUrl: string;
   avgRating: number;
   ratingCount: number;
   upvoteCount: number;
@@ -31,6 +27,7 @@ interface ContentItem {
 
 export const ContentPage = () => {
   const [categoryId, setCategoryId] = useState("");
+  const [sort, setSort] = useState("newest");
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -38,14 +35,18 @@ export const ContentPage = () => {
   const [contentUrl, setContentUrl] = useState("");
   const [newCategoryId, setNewCategoryId] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: categories } = useFetch<Category[]>(["categories"], API_ENDPOINTS.CATEGORIES.LIST);
+  const params = new URLSearchParams();
+  params.set("sort", sort);
+  if (categoryId) params.set("categoryId", categoryId);
+
   const { data: content, isLoading } = useFetch<ContentItem[]>(
-    ["content", categoryId],
-    `${API_ENDPOINTS.CONTENT.LIST}${categoryId ? `?categoryId=${categoryId}` : ""}`,
+    ["content", categoryId, sort],
+    `${API_ENDPOINTS.CONTENT.LIST}?${params.toString()}`,
   );
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -53,6 +54,7 @@ export const ContentPage = () => {
     if (!title || !description || !contentUrl || !newCategoryId) return;
     setSubmitting(true);
     setError("");
+    setSuccess(false);
     try {
       await api.post(API_ENDPOINTS.CONTENT.CREATE, {
         title,
@@ -66,6 +68,7 @@ export const ContentPage = () => {
       setContentUrl("");
       setNewCategoryId("");
       setShowForm(false);
+      setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["content"] });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to upload content"));
@@ -88,20 +91,28 @@ export const ContentPage = () => {
         )}
       </div>
 
-      <div className="mb-6 flex items-center gap-3">
-        <label className="text-gray-700 font-medium">Filter:</label>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2"
-        >
-          <option value="">All categories</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      {success && (
+        <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
+          Content shared successfully.
+        </div>
+      )}
+
+      <div className="mb-6">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <span className="text-gray-700 font-medium">Filter:</span>
+          <CategorySelect value={categoryId} onChange={setCategoryId} />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-gray-700 font-medium">Sort:</label>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="newest">Newest</option>
+            <option value="rating">Top rated</option>
+          </select>
+        </div>
       </div>
 
       {isAuthenticated && showForm && (
@@ -150,19 +161,7 @@ export const ContentPage = () => {
               </div>
               <div>
                 <label className="block text-gray-700 mb-2">Category</label>
-                <select
-                  value={newCategoryId}
-                  onChange={(e) => setNewCategoryId(e.target.value)}
-                  required
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                >
-                  <option value="">Select a category</option>
-                  {categories?.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="grid-cols-1" />
               </div>
             </div>
             <div>
@@ -191,44 +190,76 @@ export const ContentPage = () => {
 
       <Loading isLoading={isLoading}>
         <div className="space-y-4">
-          {content?.map((item) => (
-            <Link
-              key={item.id}
-              to={`/content/${item.id}`}
-              className="block bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-bold text-blue-700 mb-1">{item.title}</h3>
-                  <p className="text-gray-600 line-clamp-2">{item.description}</p>
-                </div>
-                <div className="text-right text-sm text-gray-500 shrink-0">
-                  <div className="font-semibold text-gray-700">
-                    ⭐ {item.avgRating.toFixed(1)} ({item.ratingCount})
+          {content?.map((item) => {
+            const thumb = getYouTubeThumbnail(item.contentUrl);
+            return (
+              <Link
+                key={item.id}
+                to={`/content/${item.id}`}
+                className="block bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition"
+              >
+                <div className="flex items-start gap-4">
+                  {thumb ? (
+                    <img
+                      src={thumb}
+                      alt={item.title}
+                      className="w-24 h-16 object-cover rounded shrink-0"
+                    />
+                  ) : (
+                    <div className="w-24 h-16 bg-gray-100 flex items-center justify-center text-2xl text-gray-400 shrink-0 rounded">
+                      📄
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-blue-700">{item.title}</h3>
+                    <p className="text-gray-600 line-clamp-2">{item.description}</p>
+                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                      <Avatar name={item.creator.username} className="w-6 h-6 text-xs" />
+                      <span>
+                        by{" "}
+                        <Link
+                          to={`/users/${item.creator.username}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {item.creator.username}
+                        </Link>
+                      </span>
+                      <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded uppercase text-xs font-bold">
+                        {item.type}
+                      </span>
+                      <span>in {item.category.name}</span>
+                    </div>
                   </div>
-                  <div>👍 {item.upvoteCount}</div>
-                  <div>{item.commentCount} comments</div>
+                  <div className="text-right text-sm text-gray-500 shrink-0">
+                    <div className="font-semibold text-gray-700">
+                      ⭐ {item.avgRating.toFixed(1)} ({item.ratingCount})
+                    </div>
+                    <div>👍 {item.upvoteCount}</div>
+                    <div>{item.commentCount} comments</div>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 text-sm text-gray-500">
-                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded uppercase text-xs font-bold mr-2">
-                  {item.type}
-                </span>
-                by{" "}
+              </Link>
+            );
+          })}
+          {content?.length === 0 && (
+            <div className="text-center text-gray-500 py-10">
+              <p className="mb-4">No content yet.</p>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700"
+                >
+                  Share the first resource
+                </button>
+              ) : (
                 <Link
-                  to={`/users/${item.creator.username}`}
+                  to="/login"
                   className="text-blue-600 hover:underline"
                 >
-                  {item.creator.username}
-                </Link>{" "}
-                in {item.category.name}
-              </div>
-            </Link>
-          ))}
-          {content?.length === 0 && (
-            <p className="text-center text-gray-500 py-10">
-              No content yet. Share something above!
-            </p>
+                  Login to share content
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </Loading>

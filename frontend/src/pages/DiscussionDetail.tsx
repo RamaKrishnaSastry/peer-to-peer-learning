@@ -12,6 +12,8 @@ interface Answer {
   id: string;
   text: string;
   upvoteCount: number;
+  commentCount: number;
+  myVote: boolean;
   verified: boolean;
   verdict: string | null;
   createdAt: string;
@@ -37,6 +39,7 @@ export const DiscussionDetailPage = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [statusError, setStatusError] = useState("");
+  const [statusSuccess, setStatusSuccess] = useState(false);
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -72,12 +75,14 @@ export const DiscussionDetailPage = () => {
 
   const handleToggleClosed = async () => {
     setStatusError("");
+    setStatusSuccess(false);
     try {
       if (discussion?.isClosed) {
         await api.post(API_ENDPOINTS.DISCUSSIONS.REOPEN(id!));
       } else {
         await api.post(API_ENDPOINTS.DISCUSSIONS.CLOSE(id!));
       }
+      setStatusSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["discussion", id] });
     } catch (err: unknown) {
       setStatusError(getErrorMessage(err, "Failed to update discussion"));
@@ -123,6 +128,13 @@ export const DiscussionDetailPage = () => {
                   {statusError}
                 </div>
               )}
+              {statusSuccess && (
+                <div className="bg-green-100 text-green-700 p-3 rounded mt-3">
+                  {discussion.isClosed
+                    ? "Discussion reopened."
+                    : "Discussion ended."}
+                </div>
+              )}
               <div className="text-sm text-gray-500 mt-3 mb-4">
                 by{" "}
                 <Link
@@ -155,7 +167,11 @@ export const DiscussionDetailPage = () => {
                   <div className="flex items-start gap-3">
                     <button
                       onClick={() => handleUpvote(answer.id)}
-                      className="flex flex-col items-center px-3 py-2 border border-gray-300 rounded-lg hover:border-blue-500"
+                      className={`flex flex-col items-center px-3 py-2 border rounded-lg hover:border-blue-500 ${
+                        answer.myVote
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-300"
+                      }`}
                     >
                       <span className="text-lg">👍</span>
                       <span className="font-bold text-sm">{answer.upvoteCount}</span>
@@ -175,7 +191,7 @@ export const DiscussionDetailPage = () => {
                         >
                           {answer.creator.username}
                         </Link>{" "}
-                        · {getTimeAgo(answer.createdAt)}
+                        · {getTimeAgo(answer.createdAt)} · 💬 {answer.commentCount}
                       </div>
                     </div>
                   </div>

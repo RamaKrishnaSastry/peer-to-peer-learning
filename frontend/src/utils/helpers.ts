@@ -53,3 +53,15 @@ export const getErrorMessage = (error: unknown, fallback: string): string => {
   }
   return fallback;
 };
+
+export const extractYouTubeId = (url: string): string | null => {
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return match ? match[1] : null;
+};
+
+export const getYouTubeThumbnail = (url: string): string | null => {
+  const id = extractYouTubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+};

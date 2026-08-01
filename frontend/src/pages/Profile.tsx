@@ -19,6 +19,7 @@ interface Profile {
     currentStreak: number;
     longestStreak: number;
   };
+  badges: { id: string; name: string; slug: string; earnedAt: string }[];
 }
 
 const StatCard = ({
@@ -70,12 +71,36 @@ export const ProfilePage = () => {
               <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-3xl font-bold shrink-0">
                 {profile.username.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h1 className="text-2xl font-bold">{profile.username}</h1>
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">{profile.username}</h1>
+                  <Link
+                    to={`/users/${profile.username}`}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    View public profile ↗
+                  </Link>
+                </div>
                 <p className="text-gray-500">{profile.email}</p>
                 {profile.bio && <p className="text-gray-700 mt-2">{profile.bio}</p>}
               </div>
             </div>
+
+            {profile.badges.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+                <h2 className="font-semibold mb-3">Badges</h2>
+                <div className="flex flex-wrap gap-2">
+                  {profile.badges.map((badge) => (
+                    <span
+                      key={badge.id}
+                      className="bg-yellow-100 text-yellow-800 text-sm font-semibold px-3 py-1 rounded-full"
+                    >
+                      🏅 {badge.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
               <h2 className="font-semibold mb-3">Change username</h2>

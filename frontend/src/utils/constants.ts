@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   },
   CATEGORIES: {
     LIST: '/categories',
+    ALL: '/categories/all',
     GET: (slug: string) => `/categories/${slug}`,
     TREE: (id: string) => `/categories/${id}/tree`,
     BREADCRUMB: (id: string) => `/categories/${id}/breadcrumb`,
