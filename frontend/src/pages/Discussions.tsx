@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePaginatedList } from "../hooks/usePaginatedList";
 import api from "../utils/api";
@@ -23,8 +23,9 @@ interface Discussion {
 }
 
 export const DiscussionsPage = () => {
-  const [categoryId, setCategoryId] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryId = searchParams.get("categoryId") ?? "";
+  const sort = searchParams.get("sort") ?? "newest";
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -35,6 +36,22 @@ export const DiscussionsPage = () => {
   const { isAuthenticated, user } = useAuth();
   const domain = user?.domain;
   const queryClient = useQueryClient();
+
+  const setCategoryId = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) {
+      next.set("categoryId", value);
+    } else {
+      next.delete("categoryId");
+    }
+    setSearchParams(next);
+  };
+
+  const setSort = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("sort", value);
+    setSearchParams(next);
+  };
 
   const params = new URLSearchParams();
   params.set("sort", sort);
