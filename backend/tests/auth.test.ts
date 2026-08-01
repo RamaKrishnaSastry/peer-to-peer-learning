@@ -1,5 +1,6 @@
 import request from 'supertest';
 import createApp from '../src/app';
+import prisma from '../src/db';
 
 const app = createApp();
 let counter = 0;
@@ -90,5 +91,21 @@ describe('Auth (OTP)', () => {
   test('google auth returns 503 when client id is not configured', async () => {
     const res = await request(app).post('/api/auth/google').send({ idToken: 'some-token' });
     expect(res.status).toBe(503);
+  });
+
+  test('a token for a deleted user is rejected with 401', async () => {
+    const email = unique('ghost') + '@test.com';
+    const sent = await requestOtp(email);
+    const verified = await verifyOtp(email, sent.body.data.devOtp);
+    const token = verified.body.data.token;
+    const userId = verified.body.data.user.id;
+
+    // Simulate the user being wiped (e.g. a dev DB reset).
+    await prisma.user.delete({ where: { id: userId } });
+
+    const me = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(me.status).toBe(401);
   });
 });

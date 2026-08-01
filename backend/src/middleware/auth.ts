@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../db';
 import { AuthRequest } from '../types/express';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
-export const authMiddleware = (
+export const authMiddleware = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
 
@@ -21,6 +22,21 @@ export const authMiddleware = (
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+
+    // Reject tokens whose user no longer exists (e.g. after a DB reset),
+    // otherwise writes fail with confusing FK errors.
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true },
+    });
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        error: 'Session expired, please log in again',
+      });
+      return;
+    }
+
     req.userId = decoded.userId;
     req.token = token;
     next();
