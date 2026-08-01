@@ -84,29 +84,73 @@ Format your response as JSON:
   }
 };
 
-export const generateDailyQuestion = async (category: string): Promise<string> => {
-  const prompt = `
-Generate a relevant ${category} exam question for daily practice.
-The question should be:
-- Multiple choice with 4 options (A, B, C, D)
-- Appropriately difficult
-- Based on current curriculum
+export const isLlmConfigured = (): boolean => !!GEMINI_API_KEY;
 
-Format:
-Question: [question text]
-A) [option a]
-B) [option b]
-C) [option c]
-D) [option d]
-Correct Answer: [A/B/C/D]
-Explanation: [brief explanation]
+export interface GeneratedQuestion {
+  question: string;
+  options: { label: string; text: string }[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+// Generates a fresh, original MCQ on the same topic as a trusted reference
+// question (e.g. a real PYQ or NCERT-sourced question), keeping the topic
+// grounded in the reference's source so output stays credible.
+export const generateQuestionVariant = async (exemplar: {
+  question: string;
+  options: string;
+  correctAnswer: string;
+  explanation: string | null;
+  source: string | null;
+  type: string;
+}): Promise<GeneratedQuestion> => {
+  const prompt = `
+You are a question writer for ${exemplar.type} exam preparation.
+
+Here is a trusted reference question grounded in the source "${exemplar.source}":
+Question: ${exemplar.question}
+Options: ${exemplar.options}
+Correct Answer: ${exemplar.correctAnswer}
+Explanation: ${exemplar.explanation}
+
+Write a NEW, original multiple-choice question on the SAME topic at a SIMILAR difficulty.
+Do NOT copy the reference question or its options verbatim — create a fresh question that tests related knowledge from the same source.
+Return JSON only:
+{
+  "question": "...",
+  "options": [
+    {"label": "A", "text": "..."},
+    {"label": "B", "text": "..."},
+    {"label": "C", "text": "..."},
+    {"label": "D", "text": "..."}
+  ],
+  "correctAnswer": "A|B|C|D",
+  "explanation": "..."
+}
   `;
 
   try {
-    return await callGemini(prompt, 1000);
+    const content = await callGemini(prompt, 700);
+    const parsed = JSON.parse(extractJson(content));
+
+    if (
+      !parsed.question ||
+      !Array.isArray(parsed.options) ||
+      parsed.options.length !== 4 ||
+      !parsed.correctAnswer
+    ) {
+      throw new Error('Gemini returned a malformed question');
+    }
+
+    return {
+      question: parsed.question,
+      options: parsed.options,
+      correctAnswer: parsed.correctAnswer,
+      explanation: parsed.explanation || '',
+    };
   } catch (error) {
-    console.error('Error generating daily question:', error);
-    throw new Error('Failed to generate daily question');
+    console.error('Gemini question generation error:', error);
+    throw new Error('Failed to generate question variant');
   }
 };
 

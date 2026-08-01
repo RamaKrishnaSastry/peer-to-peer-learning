@@ -204,6 +204,7 @@ model DailyQuestion {
   options       String // JSON string: [{"label":"A","text":"..."}]
   correctAnswer String
   explanation   String?
+  source        String? // e.g. "UPSC Prelims 2021" or "NCERT Class 12 - Indian Polity"
   type          String // UPSC, JEE, Finance
   date          DateTime
   categoryId    Int?

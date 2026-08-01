@@ -60,6 +60,7 @@ interface QuestionSeed {
   options: { label: string; text: string }[];
   correctAnswer: string;
   explanation: string;
+  source: string;
   type: string;
 }
 
@@ -77,6 +78,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'B',
     explanation:
       'The Indus Valley (Harappan) civilization was urban in character, with well-planned cities such as Mohenjo-daro and Harappa featuring grid layouts and drainage systems.',
+    source: 'NCERT Class 12 - Themes in Indian History (Part I)',
   },
   {
     type: 'UPSC',
@@ -91,6 +93,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'B',
     explanation:
       'The Directive Principles of State Policy (Part IV) were borrowed from the Irish Constitution, which itself was influenced by the Spanish Constitution.',
+    source: 'Laxmikanth - Indian Polity',
   },
   {
     type: 'UPSC',
@@ -105,6 +108,65 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'C',
     explanation:
       'Article 326 provides that elections to the Lok Sabha and State Legislative Assemblies shall be on the basis of adult suffrage.',
+    source: 'Laxmikanth - Indian Polity',
+  },
+  {
+    type: 'UPSC',
+    question:
+      'Impeachment of the President of India for violation of the Constitution is governed by which Article?',
+    options: [
+      { label: 'A', text: 'Article 56' },
+      { label: 'B', text: 'Article 61' },
+      { label: 'C', text: 'Article 75' },
+      { label: 'D', text: 'Article 124' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'Article 61 provides the procedure for impeachment of the President. The charge may be initiated by either House of Parliament.',
+    source: 'Laxmikanth - Indian Polity',
+  },
+  {
+    type: 'UPSC',
+    question: 'Which of the following Indian rivers flows through a rift valley?',
+    options: [
+      { label: 'A', text: 'Krishna' },
+      { label: 'B', text: 'Godavari' },
+      { label: 'C', text: 'Narmada' },
+      { label: 'D', text: 'Mahanadi' },
+    ],
+    correctAnswer: 'C',
+    explanation:
+      'The Narmada and the Tapi are west-flowing rivers that flow through rift valleys between the Vindhyas and the Satpura ranges.',
+    source: 'NCERT Class 11 Geography - India Physical Environment',
+  },
+  {
+    type: 'UPSC',
+    question:
+      'NITI Aayog, established in 2015, replaced which earlier body?',
+    options: [
+      { label: 'A', text: 'Finance Commission' },
+      { label: 'B', text: 'Planning Commission' },
+      { label: 'C', text: 'National Development Council' },
+      { label: 'D', text: 'Fiscal Policy Committee' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'NITI Aayog (National Institution for Transforming India) replaced the Planning Commission on 1 January 2015.',
+    source: 'Ramesh Singh - Indian Economy',
+  },
+  {
+    type: 'UPSC',
+    question: 'The Poona Pact (1932) was signed between Mahatma Gandhi and ____.',
+    options: [
+      { label: 'A', text: 'Muhammad Ali Jinnah' },
+      { label: 'B', text: 'Dr. B.R. Ambedkar' },
+      { label: 'C', text: 'Jawaharlal Nehru' },
+      { label: 'D', text: 'C. Rajagopalachari' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'The Poona Pact of September 1932 was agreed between Mahatma Gandhi and Dr. B.R. Ambedkar, revising the separate electorate for Depressed Classes announced in the Communal Award.',
+    source: 'Spectrum - A Brief History of Modern India',
   },
   {
     type: 'JEE',
@@ -119,6 +181,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'A',
     explanation:
       'At maximum height the final velocity is zero. Using v = u - gt with u = v and v = 0 gives t = v/g.',
+    source: 'NCERT Class 11 Physics',
   },
   {
     type: 'JEE',
@@ -133,6 +196,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'C',
     explanation:
       'The discriminant is D = b² - 4ac = 16 - 12 = 4 > 0, so the quadratic has two distinct real roots (x = 1 and x = 3).',
+    source: 'NCERT Class 11 Mathematics',
   },
   {
     type: 'JEE',
@@ -147,6 +211,79 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'C',
     explanation:
       'Carbon in methane forms four sigma bonds with four hydrogen atoms and no lone pairs, corresponding to sp³ hybridization with a tetrahedral geometry.',
+    source: 'NCERT Class 11 Chemistry',
+  },
+  {
+    type: 'JEE',
+    question:
+      'A spring of force constant k is cut into two equal halves. The force constant of each half is ____.',
+    options: [
+      { label: 'A', text: 'k/2' },
+      { label: 'B', text: 'k' },
+      { label: 'C', text: '2k' },
+      { label: 'D', text: '4k' },
+    ],
+    correctAnswer: 'C',
+    explanation:
+      'Force constant is inversely proportional to the length of the spring. Halving the length doubles the force constant, so each half has constant 2k.',
+    source: 'HC Verma - Concepts of Physics',
+  },
+  {
+    type: 'JEE',
+    question:
+      'The molecular geometry of the ammonia molecule (NH₃) is ____.',
+    options: [
+      { label: 'A', text: 'Trigonal planar' },
+      { label: 'B', text: 'Trigonal pyramidal' },
+      { label: 'C', text: 'Tetrahedral' },
+      { label: 'D', text: 'Bent' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'Nitrogen in NH₃ is sp³ hybridized with one lone pair, giving a trigonal pyramidal shape with a bond angle of about 107°.',
+    source: 'NCERT Class 11 Chemistry',
+  },
+  {
+    type: 'JEE',
+    question: 'The value of the definite integral ∫₀¹ x dx is ____.',
+    options: [
+      { label: 'A', text: '0' },
+      { label: 'B', text: '1/2' },
+      { label: 'C', text: '1' },
+      { label: 'D', text: '2' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      '∫₀¹ x dx = [x²/2]₀¹ = 1/2 - 0 = 1/2.',
+    source: 'NCERT Class 12 Mathematics',
+  },
+  {
+    type: 'JEE',
+    question: 'The dimensional formula of force is ____.',
+    options: [
+      { label: 'A', text: '[MLT⁻²]' },
+      { label: 'B', text: '[ML²T⁻²]' },
+      { label: 'C', text: '[MLT⁻¹]' },
+      { label: 'D', text: '[ML⁻¹T⁻²]' },
+    ],
+    correctAnswer: 'A',
+    explanation:
+      'Force = mass × acceleration = M × LT⁻², giving dimensions [MLT⁻²].',
+    source: 'NCERT Class 11 Physics',
+  },
+  {
+    type: 'JEE',
+    question: 'Which of the following molecules has a zero dipole moment?',
+    options: [
+      { label: 'A', text: 'NH₃' },
+      { label: 'B', text: 'H₂O' },
+      { label: 'C', text: 'CO₂' },
+      { label: 'D', text: 'CHCl₃' },
+    ],
+    correctAnswer: 'C',
+    explanation:
+      'CO₂ is linear with two identical C=O bond dipoles pointing in opposite directions, so they cancel and the molecule has a zero net dipole moment.',
+    source: 'NCERT Class 11 Chemistry',
   },
   {
     type: 'Finance',
@@ -161,6 +298,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'B',
     explanation:
       'A bond is a fixed-income debt instrument through which a company borrows money from investors and promises to repay principal with interest.',
+    source: 'NSE Academy - Securities Markets',
   },
   {
     type: 'Finance',
@@ -175,6 +313,7 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'B',
     explanation:
       'The P/E ratio compares a company’s share price to its earnings per share, indicating how much investors are willing to pay for each unit of earnings.',
+    source: 'NISM - Equity Markets',
   },
   {
     type: 'Finance',
@@ -188,6 +327,63 @@ const questionSeeds: QuestionSeed[] = [
     correctAnswer: 'B',
     explanation:
       'Diversification spreads investments across different assets, reducing unsystematic (specific) risk without necessarily reducing expected returns.',
+    source: 'The Intelligent Investor - Benjamin Graham',
+  },
+  {
+    type: 'Finance',
+    question: 'The "face value" of a share refers to its ____.',
+    options: [
+      { label: 'A', text: 'Current market price' },
+      { label: 'B', text: 'Nominal value fixed at the time of issue' },
+      { label: 'C', text: 'Book value on the balance sheet' },
+      { label: 'D', text: 'Liquidation value of the company' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'Face value (or par value) is the nominal value assigned to a share at the time of issuance and is printed on the share certificate.',
+    source: 'NSE Academy - Equity Markets',
+  },
+  {
+    type: 'Finance',
+    question: 'The primary function of the Reserve Bank of India (RBI) is to ____.',
+    options: [
+      { label: 'A', text: 'Regulate stock market trading' },
+      { label: 'B', text: 'Regulate the supply of money and credit in the economy' },
+      { label: 'C', text: 'Manage company registrations' },
+      { label: 'D', text: 'Frame the fiscal budget' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'As the central bank, the RBI formulates and implements monetary policy to regulate the supply of money and credit in the economy.',
+    source: 'NCERT Class 12 Macroeconomics',
+  },
+  {
+    type: 'Finance',
+    question: 'In fundamental analysis, the abbreviation "EPS" stands for ____.',
+    options: [
+      { label: 'A', text: 'Equity Performance Score' },
+      { label: 'B', text: 'Earnings Per Share' },
+      { label: 'C', text: 'Estimated Profit Share' },
+      { label: 'D', text: 'Equity Price Spread' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'Earnings per share (EPS) is net profit divided by the number of outstanding shares — a core input in valuation multiples.',
+    source: 'NISM - Fundamental Analysis',
+  },
+  {
+    type: 'Finance',
+    question: 'Which type of mutual fund scheme aims to track a market index such as the Nifty 50?',
+    options: [
+      { label: 'A', text: 'Sectoral fund' },
+      { label: 'B', text: 'Index fund' },
+      { label: 'C', text: 'Balanced fund' },
+      { label: 'D', text: 'Liquid fund' },
+    ],
+    correctAnswer: 'B',
+    explanation:
+      'An index fund passively tracks a market index (for example the Nifty 50), aiming to mirror its composition and returns.',
+    source: 'NSE Academy - Mutual Funds',
   },
 ];
 
@@ -224,47 +420,27 @@ async function seedCategories() {
 }
 
 async function seedQuestions() {
-  // Spread questions one per day so the "today" endpoint always has content.
-  for (const seed of questionSeeds) {
-    await prisma.dailyQuestion.upsert({
-      where: {
-        type_date: { type: seed.type, date: daysFromNow(0) },
-      },
-      update: {},
-      create: {
-        question: seed.question,
-        options: JSON.stringify(seed.options),
-        correctAnswer: seed.correctAnswer,
-        explanation: seed.explanation,
-        type: seed.type,
-        date: daysFromNow(0),
-      },
-    });
-  }
-  // Add one extra question per domain on following days so rotation has variety.
-  const tomorrow: Record<string, QuestionSeed> = {
-    UPSC: questionSeeds[1],
-    JEE: questionSeeds[4],
-    Finance: questionSeeds[7],
-  };
-  const dayAfter: Record<string, QuestionSeed> = {
-    UPSC: questionSeeds[2],
-    JEE: questionSeeds[5],
-    Finance: questionSeeds[8],
-  };
-  for (const type of ['UPSC', 'JEE', 'Finance'] as const) {
-    for (const [offset, map] of [[1, tomorrow], [2, dayAfter]] as const) {
-      const seed = map[type];
+  const types = ['UPSC', 'JEE', 'Finance'] as const;
+
+  for (const type of types) {
+    const seeds = questionSeeds.filter((s) => s.type === type);
+
+    for (const [index, seed] of seeds.entries()) {
+      // First three: today, tomorrow, day-after. Rest: distinct past dates so
+      // they enrich the pool used by rotation and LLM variant generation.
+      const date = index < 3 ? daysFromNow(index) : daysFromNow(-(index + 1));
+
       await prisma.dailyQuestion.upsert({
-        where: { type_date: { type, date: daysFromNow(offset) } },
+        where: { type_date: { type, date } },
         update: {},
         create: {
           question: seed.question,
           options: JSON.stringify(seed.options),
           correctAnswer: seed.correctAnswer,
           explanation: seed.explanation,
+          source: seed.source,
           type,
-          date: daysFromNow(offset),
+          date,
         },
       });
     }

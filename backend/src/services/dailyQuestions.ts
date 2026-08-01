@@ -1,4 +1,5 @@
 import prisma from '../db';
+import { generateQuestionVariant, isLlmConfigured } from './llm';
 
 export interface QuestionOption {
   label: string;
@@ -14,6 +15,50 @@ export const parseOptions = (options: string): QuestionOption[] => {
   }
 };
 
+// When no question is scheduled for today, ask the LLM to write a fresh
+// variant grounded in a trusted, sourced question from the curated bank.
+const generateTodaysQuestion = async (type: string, date: Date) => {
+  try {
+    if (!isLlmConfigured()) return null;
+
+    const pool = await prisma.dailyQuestion.findMany({
+      where: { type, source: { not: null } },
+      select: {
+        id: true,
+        question: true,
+        options: true,
+        correctAnswer: true,
+        explanation: true,
+        source: true,
+        type: true,
+      },
+    });
+    if (pool.length === 0) return null;
+
+    const exemplar = pool[Math.floor(Math.random() * pool.length)];
+    const generated = await generateQuestionVariant(exemplar);
+
+    await prisma.dailyQuestion.upsert({
+      where: { type_date: { type, date } },
+      update: {},
+      create: {
+        question: generated.question,
+        options: JSON.stringify(generated.options),
+        correctAnswer: generated.correctAnswer,
+        explanation: generated.explanation,
+        source: `AI variant grounded in: ${exemplar.source}`,
+        type,
+        date,
+      },
+    });
+
+    return prisma.dailyQuestion.findUnique({ where: { type_date: { type, date } } });
+  } catch (error) {
+    console.error('Question generation failed, falling back to rotation:', error);
+    return null;
+  }
+};
+
 export const getTodaysQuestion = async (type: string, userId?: string) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -21,6 +66,10 @@ export const getTodaysQuestion = async (type: string, userId?: string) => {
   let question = await prisma.dailyQuestion.findUnique({
     where: { type_date: { type, date: today } },
   });
+
+  if (!question) {
+    question = await generateTodaysQuestion(type, today);
+  }
 
   if (!question) {
     // Fallback: deterministic rotation through the question bank so every
