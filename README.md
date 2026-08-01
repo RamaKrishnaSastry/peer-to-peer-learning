@@ -9,7 +9,7 @@ This platform addresses a specific problem: students spend excessive time findin
 ## Core Features
 
 ### Phase 1 (Weeks 1-4)
-- User authentication (signup/login)
+- User authentication (email OTP + Google OAuth)
 - Curriculum hierarchy (4-level categorization)
 - Daily questions with immediate AI verification
 - Peer comments and discussion threads
@@ -183,8 +183,8 @@ npx prisma migrate reset
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/signup` - Register new user
-- `POST /api/auth/login` - User login
+- `POST /api/auth/otp/request` - Request a 6-digit email OTP (dev: code logged to console + returned as `devOtp`)
+- `POST /api/auth/otp/verify` - Verify the code; logs in or creates the account, returns a JWT
 - `POST /api/auth/google` - Google OAuth login/register (verify ID token)
 - `GET /api/auth/me` - Get current user with stats
 
@@ -331,7 +331,8 @@ npm run test:coverage
 ## Security
 
 - JWT tokens with 7-day expiration
-- bcryptjs for password hashing (10 salt rounds)
+- Email OTP auth: 6-digit codes stored only as sha256 hashes, 10-minute TTL, 5-attempt cap, 60s resend cooldown
+- Google OAuth ID-token verification via `google-auth-library`
 - CORS configured to allow only frontend origin
 - Input validation and sanitization
 - Rate limiting on authentication endpoints
