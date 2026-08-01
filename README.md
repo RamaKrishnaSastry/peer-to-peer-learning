@@ -185,20 +185,20 @@ npx prisma migrate reset
 
 ### Authentication
 - `POST /api/auth/otp/request` - Request a 6-digit email OTP (dev: code logged to console + returned as `devOtp`)
-- `POST /api/auth/otp/verify` - Verify the code to create an account (accepts `password` ≥8 chars and optional `username`), returns a JWT
+- `POST /api/auth/otp/verify` - Verify the code to create an account (requires `domain` `UPSC`/`JEE`/`Finance`, accepts `password` ≥8 chars and optional `username`), returns a JWT
 - `POST /api/auth/login` - Password login by email or username
 - `POST /api/auth/google` - Google OAuth login (requires a registered account; links `googleId`)
 - `GET /api/auth/me` - Get current user with stats
 
 ### Categories
 - `GET /api/categories` - List root categories
-- `GET /api/categories/all` - List all categories flattened (for cascading selects)
+- `GET /api/categories/all` - List all categories flattened (for cascading selects; optional `?domain=` filter)
 - `GET /api/categories/:slug` - Get specific category with children
 - `GET /api/categories/:id/tree` - Get full category tree
 - `GET /api/categories/:id/breadcrumb` - Get category breadcrumb
 
 ### Content
-- `GET /api/content` - List content (filter by `categoryId`, sort by `newest`/`rating`)
+- `GET /api/content` - List content (filter by `categoryId`/`domain`, sort by `newest`/`rating`)
 - `GET /api/content/:id` - View content with comments (includes comment `upvoteCount`/`myVote`)
 - `POST /api/content` - Upload study material
 - `PUT /api/content/:id` - Update content (owner only)
@@ -216,7 +216,7 @@ npx prisma migrate reset
 
 ### Discussions
 - `POST /api/discussions` - Create discussion
-- `GET /api/discussions` - List discussions (filter by `categoryId`, sort by `newest`/`top`)
+- `GET /api/discussions` - List discussions (filter by `categoryId`/`domain`, sort by `newest`/`top`)
 - `GET /api/discussions/:id` - View discussion with answers (includes `commentCount`/`myVote` per answer)
 - `POST /api/discussions/:id/answers` - Add answer (403 when the discussion is ended)
 - `POST /api/discussions/:id/comment` - Comment on a discussion
@@ -227,7 +227,7 @@ npx prisma migrate reset
 
 ### Users
 - `GET /api/users/me` - Current user profile with stats + badges
-- `PUT /api/users/me` - Update username / bio / avatarUrl
+- `PUT /api/users/me` - Update username / bio / avatarUrl / domain
 - `GET /api/users/:username` - Public profile with stats + badges
 - `GET /api/users/:username/content` - User's content
 - `GET /api/users/:username/answers` - User's answers

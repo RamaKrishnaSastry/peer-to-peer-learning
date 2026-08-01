@@ -157,13 +157,25 @@ Each entry = requirement → what we did → key files → status.
 ### 2.10 Testing
 - **Requirement:** Integration tests so we don't break the core flows.
 - **What we did:** Jest + supertest. Test DB = `file:./test.db` set in `tests/setup.ts`; `tests/global-setup.ts` runs `prisma migrate deploy` + `prisma db seed` against it. `GEMINI_API_KEY` and `GOOGLE_CLIENT_ID` forced empty in tests so AI/Google paths use fallbacks.
-- **Suites:** `tests/auth.test.ts`, `tests/dailyQuestions.test.ts`, `tests/community.test.ts` — **3 suites / 30 tests, all passing.** Shared helper `tests/helpers.ts::signupAndGetToken` drives the OTP flow.
-- **Coverage:** OTP request/verify (valid, wrong code, repeated/cooldown, expired flow), password registration, login by email/username, /me, Google 503-when-unconfigured, today's question, correct/incorrect submit, 409 resubmit, streak = 1, content comment/rate/upvote, discussion/answer/upvote, discussion close/reopen + 403 stranger, stats aggregation.
+- **Suites:** `tests/auth.test.ts`, `tests/dailyQuestions.test.ts`, `tests/community.test.ts` — **3 suites / 33 tests, all passing.** Shared helper `tests/helpers.ts::signupAndGetToken` drives the OTP flow.
+- **Coverage:** OTP request/verify (valid, wrong code, repeated/cooldown, expired flow), password registration, login by email/username, /me, Google 503-when-unconfigured, today's question, correct/incorrect submit, 409 resubmit, streak = 1, content comment/rate/upvote, discussion/answer/upvote, discussion close/reopen + 403 stranger, stats aggregation, **registration requires a valid exam domain (missing/invalid → 400), changing domain via /me, domain-filtered content/discussion lists.**
 - **Status:** Done.
 
 ### 2.11 Docs
 - **Requirement:** Setup + API docs.
 - **What we did:** Updated `README.md` (SQLite setup, Google OAuth, Gemini verification, API reference, env vars). Left the historical planning docs in `docs/`, `ARCHITECTURE.md`, `SETUP.md`, etc. as-is (they still reference Claude/PostgreSQL and are out of date but serve as planning history).
+
+### 2.12 Exam-domain scoping (pick UPSC / JEE / Finance, feed is locked to it)
+- **Requirement:** Users pick one exam domain; the platform shows only that domain's content. Hard lock — you only ever see your chosen domain; legacy users (created before this feature, no domain set) keep seeing everything until they pick one in Settings.
+- **Decision:** Hard lock with a Settings escape hatch. Signup requires a domain; existing users can set/change it in Settings (`PUT /api/users/me`). Domain is stored on `User.domain` and drives every list/filter on the frontend.
+- **What we did:**
+  - Schema: `User.domain String?` (migration `add_user_domain`). Domain values: `UPSC | JEE | Finance`.
+  - Backend: `POST /api/auth/otp/verify` now requires a valid `domain` (400 "Please select a valid exam domain (UPSC, JEE, or Finance)" otherwise) and stores it on the user; `PUT /api/users/me` accepts + validates `domain`; `GET /api/auth/me` and `GET /api/users/:username` return `domain`; `GET /api/categories/all?domain=` filters the flat category list.
+  - Content/discussion feeds accept `?domain=` and filter via `category: { domain }` (`GET /api/content`, `GET /api/discussions`).
+  - Frontend: `AuthContext.User.domain` + `register(..., domain)`; `EmailOtpForm` gets a 3-card exam picker (UPSC 🏛️ / JEE ⚙️ / Finance 📈); `Settings` gets an Exam Domain card (shows a "you currently see everything" note for legacy users); `SignedInHome` shows only the user's domain today-question + scopes Latest Discussions/Content; `DailyQuestion` locks the tab to the user's domain; `CategorySelect` accepts a `domain` prop and fetches `?domain=`; Content/Discussions lists + create forms are domain-scoped; Browse (`Categories`) filters root categories by the user's domain. Legacy users (no domain) get exactly the previous all-domain behavior everywhere.
+- **Key files:** `backend/prisma/schema.prisma`, `backend/src/routes/auth.ts`, `users.ts`, `categories.ts`, `content.ts`, `discussions.ts`, `frontend/src/components/EmailOtpForm.tsx`, `CategorySelect.tsx`, `frontend/src/pages/Settings.tsx`, `Home.tsx`, `DailyQuestion.tsx`, `Content.tsx`, `Discussions.tsx`, `Categories.tsx`, `frontend/src/contexts/AuthContext.tsx`.
+- **Status:** Done. Backend tests updated (helpers send `domain: 'UPSC'`) + 3 new tests (missing/invalid domain → 400, change domain via `/me`, domain-filtered content/discussions) → **33/33 passing**.
+- **Insight:** filtering by domain at the `category` relation level is a one-line `where` change; the hard part is plumbing the current user's domain through every fetch hook — every query key now includes the domain so react-query refetches when it changes.
 
 ---
 
@@ -272,10 +284,11 @@ Convention going forward: small commits, one issue/feature each.
 ## 7. Current status
 
 - Backend tsc build: clean. Frontend build: clean. Frontend lint: clean.
-- Tests: 30/30 passing (3 suites).
+- Tests: 33/33 passing (3 suites).
 - Gemini verification: verified live (works with the key in `backend/.env`).
 - Gemini question-variant generation: verified live (generates a fresh grounded question when today has no scheduled one).
 - Google OAuth: key configured in both `.env` files; needs frontend restart to appear.
+- Domain scoping: live on the backend (new users must pick UPSC/JEE/Finance at signup; legacy users keep all until they pick in Settings).
 - Working tree: clean; ~24 commits ahead of `origin/main`.
 
 ---
