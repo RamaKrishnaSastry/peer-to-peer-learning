@@ -1,6 +1,5 @@
 import { Router, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { AuthRequest } from '../types/express';
 import {
@@ -233,24 +232,14 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
     });
 
     if (!user) {
-      const username = await generateUniqueUsername(googleEmail);
-      const hashedPassword = await hashPassword(crypto.randomBytes(32).toString('hex'));
-
-      user = await prisma.$transaction(async (tx) => {
-        const created = await tx.user.create({
-          data: {
-            email: googleEmail,
-            username,
-            password: hashedPassword,
-            googleId: googleSub,
-            avatarUrl: googlePicture,
-            verified: true,
-          },
-        });
-        await tx.userStats.create({ data: { userId: created.id } });
-        return created;
+      // No auto-create: Google sign-in requires a registered account.
+      return res.status(401).json({
+        success: false,
+        error: 'No account found for this email. Please register first.',
       });
-    } else if (!user.googleId) {
+    }
+
+    if (!user.googleId) {
       // Existing email/password account signing in with Google for the first time
       user = await prisma.user.update({
         where: { id: user.id },
