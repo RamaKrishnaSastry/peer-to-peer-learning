@@ -162,7 +162,15 @@ export const verifyAnswer = async (
 ): Promise<LLMVerificationResponse> => {
   if (!GEMINI_API_KEY) {
     // Deterministic offline fallback so the core flow works without the API key.
-    const isExact = correctAnswer !== undefined && answer.toUpperCase() === correctAnswer.toUpperCase();
+    // The answer may be a bare letter ("B") or a full option ("B) option text");
+    // compare just the option letter.
+    const toLetter = (value: string): string => {
+      const match = value.toUpperCase().match(/^([A-D])\s*\)?\s*/);
+      return match ? match[1] : value.toUpperCase();
+    };
+    const isExact =
+      correctAnswer !== undefined &&
+      toLetter(answer) === toLetter(correctAnswer);
     return {
       verdict: correctAnswer !== undefined ? (isExact ? 'CORRECT' : 'INCORRECT') : 'REQUIRES_CONTEXT',
       confidence: correctAnswer !== undefined ? 100 : 0,

@@ -111,9 +111,18 @@ router.post('/:id/submit', authMiddleware, async (req: AuthRequest, res: Respons
 
     const isCorrect = selectedAnswer === question.correctAnswer.toUpperCase();
 
+    // Give the LLM the option text, not just the bare letter, so the verdict
+    // is actually verifiable.
+    const selectedOption = parseOptions(question.options).find(
+      (o) => o.label.toUpperCase() === selectedAnswer
+    );
+    const answerForVerification = selectedOption
+      ? `${selectedOption.label}) ${selectedOption.text}`
+      : selectedAnswer;
+
     const verification = await verifyAnswer(
       question.question,
-      selectedAnswer,
+      answerForVerification,
       question.type,
       question.correctAnswer
     );
