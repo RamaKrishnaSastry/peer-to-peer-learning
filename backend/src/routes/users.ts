@@ -10,7 +10,14 @@ const router = Router();
 // Get current user profile
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      include: {
+        badges: {
+          select: { earnedAt: true, badge: { select: { id: true, name: true, slug: true } } },
+        },
+      },
+    });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -31,6 +38,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
         verified: user.verified,
         createdAt: user.createdAt,
         stats,
+        badges: user.badges.map((ub) => ({ ...ub.badge, earnedAt: ub.earnedAt })),
       },
     });
   } catch (error) {
@@ -110,7 +118,14 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.get('/:username', async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: {
+        badges: {
+          select: { earnedAt: true, badge: { select: { id: true, name: true, slug: true } } },
+        },
+      },
+    });
 
     if (!user) {
       return res.status(404).json({
@@ -131,6 +146,7 @@ router.get('/:username', async (req: AuthRequest, res: Response) => {
         verified: user.verified,
         createdAt: user.createdAt,
         stats,
+        badges: user.badges.map((ub) => ({ ...ub.badge, earnedAt: ub.earnedAt })),
       },
     });
   } catch (error) {

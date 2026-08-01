@@ -24,6 +24,23 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// Get all categories flattened (for cascading selects)
+router.get('/all', async (_req: AuthRequest, res: Response) => {
+  try {
+    const all = await prisma.category.findMany({ orderBy: { id: 'asc' } });
+    return res.json({
+      success: true,
+      data: all,
+    });
+  } catch (error) {
+    console.error('List all categories error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch categories',
+    });
+  }
+});
+
 // Get category by slug with children
 router.get('/:slug', async (req: AuthRequest, res: Response) => {
   try {

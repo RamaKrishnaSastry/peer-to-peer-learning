@@ -1,25 +1,30 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../types/express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, optionalAuth } from '../middleware/auth';
 import prisma from '../db';
 import { recalculateUserStats, awardBadge } from '../services/engagement';
 
 const router = Router();
 
-// List discussions with pagination
+// List discussions with pagination + sorting
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { categoryId } = req.query;
+    const { categoryId, sort = 'newest' } = req.query;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = parseInt(req.query.offset as string) || 0;
 
     const where = categoryId ? { categoryId: parseInt(categoryId as string) } : {};
 
+    const orderBy =
+      sort === 'top'
+        ? [{ answerCount: 'desc' as const }, { createdAt: 'desc' as const }]
+        : [{ createdAt: 'desc' as const }];
+
     const [total, items] = await Promise.all([
       prisma.discussion.count({ where }),
       prisma.discussion.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip: offset,
         take: limit,
         include: {
@@ -54,7 +59,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // Get single discussion with answers
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const discussion = await prisma.discussion.findUnique({
@@ -92,6 +97,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     });
     const commentCountMap = new Map(commentCounts.map((c) => [c.parentId, c._count._all]));
 
+    const answerIds = answers.map((a) => a.id);
+    const myVotedAnswerIds = req.userId
+      ? await prisma.vote.findMany({
+          where: { parentType: 'answer', parentId: { in: answerIds }, userId: req.userId },
+          select: { parentId: true },
+        })
+      : [];
+    const myVoteSet = new Set(myVotedAnswerIds.map((v) => v.parentId));
+
     return res.json({
       success: true,
       data: {
@@ -100,6 +114,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         answers: answers.map((a) => ({
           ...a,
           commentCount: commentCountMap.get(a.id) ?? 0,
+          myVote: myVoteSet.has(a.id),
         })),
       },
     });

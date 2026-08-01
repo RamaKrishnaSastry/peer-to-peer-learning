@@ -130,11 +130,20 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
       myRating = mine ? mine.stars : null;
     }
 
+    const commentIds = comments.map((c) => c.id);
+    const myVotedCommentIds = req.userId
+      ? await prisma.vote.findMany({
+          where: { parentType: 'comment', parentId: { in: commentIds }, userId: req.userId },
+          select: { parentId: true },
+        })
+      : [];
+    const myVoteSet = new Set(myVotedCommentIds.map((v) => v.parentId));
+
     return res.json({
       success: true,
       data: {
         ...content,
-        comments,
+        comments: comments.map((c) => ({ ...c, myVote: myVoteSet.has(c.id) })),
         upvoteCount: voteCount,
         myRating,
         ratings: undefined,
