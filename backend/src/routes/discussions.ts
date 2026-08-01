@@ -157,6 +157,74 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Close a discussion (creator only) so no further answers can be posted
+router.post('/:id/close', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        error: 'Discussion not found',
+      });
+    }
+    if (discussion.creatorId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the discussion starter can end this discussion',
+      });
+    }
+
+    const updated = await prisma.discussion.update({
+      where: { id },
+      data: { isClosed: true },
+      select: { id: true, isClosed: true },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Close discussion error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to close discussion',
+    });
+  }
+});
+
+// Reopen a discussion (creator only)
+router.post('/:id/reopen', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const discussion = await prisma.discussion.findUnique({ where: { id } });
+    if (!discussion) {
+      return res.status(404).json({
+        success: false,
+        error: 'Discussion not found',
+      });
+    }
+    if (discussion.creatorId !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the discussion starter can reopen this discussion',
+      });
+    }
+
+    const updated = await prisma.discussion.update({
+      where: { id },
+      data: { isClosed: false },
+      select: { id: true, isClosed: true },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Reopen discussion error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to reopen discussion',
+    });
+  }
+});
+
 // Post answer
 router.post('/:id/answers', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -175,6 +243,12 @@ router.post('/:id/answers', authMiddleware, async (req: AuthRequest, res: Respon
       return res.status(404).json({
         success: false,
         error: 'Discussion not found',
+      });
+    }
+    if (discussion.isClosed) {
+      return res.status(403).json({
+        success: false,
+        error: 'This discussion has ended. No more answers can be posted.',
       });
     }
 

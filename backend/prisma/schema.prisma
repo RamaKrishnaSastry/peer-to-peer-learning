@@ -96,10 +96,11 @@ model Discussion {
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])
 
-  title       String
-  description String
-  answerCount Int @default(0)
-  viewCount   Int @default(0)
+    title       String
+    description String
+    answerCount Int @default(0)
+    viewCount   Int @default(0)
+    isClosed    Boolean @default(false)
 
   // Relations
   answers Answer[]

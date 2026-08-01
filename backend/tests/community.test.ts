@@ -84,6 +84,7 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     expect(detail.status).toBe(200);
     expect(detail.body.data.answers.length).toBe(0);
     expect(detail.body.data.viewCount).toBe(1);
+    expect(detail.body.data.isClosed).toBe(false);
 
     const answer = await request(app)
       .post(`/api/discussions/${discussionId}/answers`)
@@ -102,11 +103,70 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     expect(detailAfter.body.data.answers[0].upvoteCount).toBe(1);
   });
 
+  test('creator can end a discussion; no further answers are allowed', async () => {
+    const create = await request(app)
+      .post('/api/discussions')
+      .set(auth)
+      .send({
+        title: 'Settlement of a discussion',
+        description: 'Will be closed',
+        categoryId,
+      });
+    const discussionId = create.body.data.id;
+
+    const closed = await request(app)
+      .post(`/api/discussions/${discussionId}/close`)
+      .set(auth);
+    expect(closed.status).toBe(200);
+    expect(closed.body.data.isClosed).toBe(true);
+
+    const detail = await request(app).get(`/api/discussions/${discussionId}`);
+    expect(detail.body.data.isClosed).toBe(true);
+
+    const answer = await request(app)
+      .post(`/api/discussions/${discussionId}/answers`)
+      .set(auth)
+      .send({ text: 'Too late' });
+    expect(answer.status).toBe(403);
+
+    const reopened = await request(app)
+      .post(`/api/discussions/${discussionId}/reopen`)
+      .set(auth);
+    expect(reopened.status).toBe(200);
+    expect(reopened.body.data.isClosed).toBe(false);
+
+    const answerAfter = await request(app)
+      .post(`/api/discussions/${discussionId}/answers`)
+      .set(auth)
+      .send({ text: 'Back open' });
+    expect(answerAfter.status).toBe(201);
+  });
+
+  test('only the discussion starter can end it', async () => {
+    const creator = await signupAndGetToken(app, 'creator');
+    const stranger = await signupAndGetToken(app, 'stranger');
+
+    const create = await request(app)
+      .post('/api/discussions')
+      .set('Authorization', `Bearer ${creator}`)
+      .send({
+        title: 'My private thread',
+        description: 'Only I can close',
+        categoryId,
+      });
+    const discussionId = create.body.data.id;
+
+    const close = await request(app)
+      .post(`/api/discussions/${discussionId}/close`)
+      .set('Authorization', `Bearer ${stranger}`);
+    expect(close.status).toBe(403);
+  });
+
   test('profile reflects accumulated stats', async () => {
     const me = await request(app).get('/api/auth/me').set(auth);
     expect(me.status).toBe(200);
     expect(me.body.data.stats.contentCount).toBe(1);
-    expect(me.body.data.stats.answerCount).toBe(1);
+    expect(me.body.data.stats.answerCount).toBe(2);
     expect(me.body.data.stats.upvotesReceived).toBeGreaterThanOrEqual(1);
     expect(me.body.data.stats.reputationScore).toBeGreaterThan(0);
   });
