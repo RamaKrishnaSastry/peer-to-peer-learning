@@ -19,6 +19,7 @@ interface Question {
   options: QuestionOption[];
   correctAnswer: string;
   explanation: string | null;
+  source: string | null;
   type: string;
   attempted: boolean;
   myAttempt?: {
@@ -121,6 +122,12 @@ export const DailyQuestionPage = () => {
         {question ? (
           <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-6">{question.question}</h2>
+
+            {question.source && (
+              <p className="text-sm text-gray-500 mb-4">
+                Source: {question.source}
+              </p>
+            )}
 
             <div className="space-y-3">
               {question.options.map((option) => {
