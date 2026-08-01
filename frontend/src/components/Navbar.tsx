@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -24,7 +24,18 @@ const avatarColorFor = (name: string): string => {
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -58,14 +69,12 @@ export const Navbar = () => {
 
           <div className="flex items-center space-x-4">
             {isAuthenticated && user ? (
-              <div
-                className="relative"
-                onMouseEnter={() => setMenuOpen(true)}
-                onMouseLeave={() => setMenuOpen(false)}
-              >
+              <div className="relative" ref={menuRef}>
                 <button
+                  onClick={() => setMenuOpen((open) => !open)}
                   className={`w-10 h-10 rounded-full text-white font-bold flex items-center justify-center ${avatarColorFor(user.username)}`}
                   aria-label="Account menu"
+                  aria-expanded={menuOpen}
                 >
                   {user.username.charAt(0).toUpperCase()}
                 </button>
