@@ -10,15 +10,16 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
 - [x] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
 - [x] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak, domain filter) + page with tabs and medals.
-- [x] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically; returns absolute URL via `PUBLIC_URL` (required in prod). **Follow-up:** swap to R2/S3 for durable storage (deploy platforms have ephemeral filesystems).
-- [x] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
+- [x] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically; returns absolute URL via `PUBLIC_URL` (required in prod). HTML assets relax helmet CORP to `cross-origin` so `<img>`/avatars embed from the frontend origin. **Follow-up:** swap to R2/S3 for durable storage (deploy platforms have ephemeral filesystems).
+- [x] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting. Moderation queue (`GET`/`PATCH /api/reports`) is gated behind a `moderator`/`admin` role (`User.role`, `requireRole` middleware, `npm run promote`).
 - [x] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
 - [ ] **#9 Follow + bookmarks** — `Follow`/`Bookmark` models, follow button on profiles, bookmark buttons, bookmarks page.
 - [ ] **#10 Subjective/Mains-style questions** — open-ended daily question type + AI essay grading.
 
 ## Backend hardening (implementation-layer review)
 - [x] **Rate limiting** (`express-rate-limit`) — general API limiter (600/15min), auth limiter on OTP/login/reset (20/15min), write limiter on content/discussion creation (60/15min). Disabled under NODE_ENV=test.
-- [x] **Security headers** — `helmet()` in `app.ts` (X-Content-Type-Options, X-Frame-Options, CSP, etc.).
+- [x] **Security headers** — `helmet()` in `app.ts` (X-Content-Type-Options, X-Frame-Options, CSP, etc.). CORP relaxed to `cross-origin` on `/uploads` so uploaded images/avatars embed from the frontend origin.
+- [x] **Moderator role & authorization** — `User.role` (`user`/`moderator`/`admin`) + `requireRole` middleware; moderation queue (`GET`/`PATCH /api/reports`) now requires a moderator/admin. Bootstrap via `npm run promote -- <user> [moderator|admin]`.
 - [ ] **Request validation layer** — Zod/Joi/express-validator instead of per-route `if (!x)`. Audit less-visited routes (URL format on `POST /content`, answer length cap, etc.).
 - [ ] **API versioning** — mount routes under `/api/v1/` before any external client depends on the API.
 - [ ] **Soft-delete / audit trail** — `deletedAt` on comments/content so moderation disputes have an evidence trail.

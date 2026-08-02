@@ -1,5 +1,6 @@
 import request from 'supertest';
 import createApp from '../src/app';
+import prisma from '../src/db';
 import { signupAndGetToken } from './helpers';
 const app = createApp();
 
@@ -333,20 +334,49 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
       .send({ targetType: 'content', targetId: 'nonexistent-id', reason: 'spam' });
     expect(missing.status).toBe(404);
 
-    const queue = await request(app).get('/api/reports').set(reporterAuth);
+    // A regular user cannot view or resolve the moderation queue.
+    const forbiddenQueue = await request(app).get('/api/reports').set(reporterAuth);
+    expect(forbiddenQueue.status).toBe(403);
+
+    const forbiddenPatch = await request(app)
+      .patch(`/api/reports/${report.body.data.id}`)
+      .set(reporterAuth)
+      .send({ status: 'reviewed' });
+    expect(forbiddenPatch.status).toBe(403);
+
+    // Promote a moderator (via the DB as an admin would via the script) and verify access.
+    const moderatorToken = await signupAndGetToken(app, 'modr');
+    const moderator = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${moderatorToken}`);
+    await prisma.user.update({
+      where: { id: moderator.body.data.id },
+      data: { role: 'moderator' },
+    });
+    const modAuth = { Authorization: `Bearer ${moderatorToken}` };
+
+    const queue = await request(app).get('/api/reports').set(modAuth);
     expect(queue.status).toBe(200);
     expect(queue.body.total).toBeGreaterThanOrEqual(1);
     expect(queue.body.data[0].status).toBe('open');
 
     const reviewed = await request(app)
       .patch(`/api/reports/${report.body.data.id}`)
-      .set(reporterAuth)
+      .set(modAuth)
       .send({ status: 'reviewed', reviewNote: 'Actioned' });
     expect(reviewed.status).toBe(200);
     expect(reviewed.body.data.status).toBe('reviewed');
 
-    const openQueue = await request(app).get('/api/reports?status=open').set(reporterAuth);
+    const openQueue = await request(app).get('/api/reports?status=open').set(modAuth);
     expect(openQueue.body.data.some((r: any) => r.id === report.body.data.id)).toBe(false);
+
+    // Promote to admin as an escalation check.
+    await prisma.user.update({
+      where: { id: moderator.body.data.id },
+      data: { role: 'admin' },
+    });
+    const adminQueue = await request(app).get('/api/reports').set(modAuth);
+    expect(adminQueue.status).toBe(200);
   });
 
   test('file upload stores a file and returns a public URL', async () => {
@@ -366,6 +396,7 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const fileRes = await request(app).get(up.body.data.url.replace(/^http:\/\/localhost:3001/, ''));
     expect(fileRes.status).toBe(200);
     expect(fileRes.text).toContain('hello upload');
+    expect(fileRes.headers['cross-origin-resource-policy']).toBe('cross-origin');
 
     const badExt = await request(app)
       .post('/api/uploads')

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../types/express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, requireRole } from '../middleware/auth';
 import prisma from '../db';
 
 const router = Router();
@@ -86,8 +86,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// List reports (moderation queue) - only 'open' by default
-router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+// List reports (moderation queue) - only 'open' by default. Moderators/admin only.
+router.get('/', authMiddleware, requireRole('moderator'), async (req: AuthRequest, res: Response) => {
   try {
     const status = (req.query.status as string) || 'open';
     if (!VALID_STATUSES.includes(status)) {
@@ -130,8 +130,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Update report status (reviewed / dismissed)
-router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+// Update report status (reviewed / dismissed). Moderators/admin only.
+router.patch('/:id', authMiddleware, requireRole('moderator'), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, reviewNote } = req.body;

@@ -5,6 +5,40 @@ import { AuthRequest } from '../types/express';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
+export type Role = 'user' | 'moderator' | 'admin';
+
+// Require the caller to hold at least the given role. Auth must already be running.
+export const requireRole =
+  (minRole: Role = 'moderator') =>
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { id: true, role: true },
+      });
+
+      // Normalize missing role (legacy accounts) to 'user'.
+      const role: Role = (user?.role as Role) || 'user';
+      const rank = { user: 0, moderator: 1, admin: 2 };
+      const allowed = rank[role] >= rank[minRole];
+
+      if (!user || !allowed) {
+        res.status(403).json({
+          success: false,
+          error: 'You do not have permission to perform this action',
+        });
+        return;
+      }
+
+      next();
+    } catch (error) {
+      res.status(403).json({
+        success: false,
+        error: 'You do not have permission to perform this action',
+      });
+    }
+  };
+
 export const authMiddleware = async (
   req: AuthRequest,
   res: Response,

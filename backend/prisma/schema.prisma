@@ -12,11 +12,12 @@ model User {
   email     String   @unique
   username  String   @unique
   password  String
-  googleId  String?  @unique
+googleId String?  @unique
   bio       String?
   avatarUrl String?
   domain    String? // UPSC, JEE, Finance
   verified  Boolean  @default(false)
+  role      String   @default("user") // user | moderator | admin
 
   // Relations
   stats       UserStats?

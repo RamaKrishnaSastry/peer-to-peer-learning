@@ -34,8 +34,14 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // Serve uploaded files statically (both from src during dev and dist in prod)
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  // Serve uploaded files statically (both from src during dev and dist in prod).
+  // Override helmet's default CORP=same-origin for these assets so images/avatars
+  // can be embedded from a different origin (e.g. frontend :3000 -> api :3001).
+  app.use(
+    '/uploads',
+    helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
+    express.static(path.join(__dirname, '../uploads')),
+  );
 
   // Request logging
   app.use((req: Request, _res: Response, next) => {
