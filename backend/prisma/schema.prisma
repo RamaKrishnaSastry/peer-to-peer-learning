@@ -113,8 +113,9 @@ model Content {
 
   title       String
   description String
-  type        String // video, notes
+  type        String // video, notes, article, image
   contentUrl  String
+  body        String? // article content (markdown/text) rendered inline
   version     Int @default(1)
 
   avgRating   Float @default(0)

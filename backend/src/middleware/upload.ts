@@ -27,13 +27,40 @@ const ALLOWED_EXTENSIONS = new Set([
   '.zip',
 ]);
 
+const ALLOWED_MIMETYPES = new Set([
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/zip',
+]);
+
+// Some servers report zip/binaries as octet-stream; only accept that MIME
+// when the extension is clearly a binary archive we allow anyway.
+const OCTET_STREAM_OK_EXTENSIONS = new Set(['.zip']);
+
 export const fileFilter = (
   _req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback,
 ) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (ALLOWED_EXTENSIONS.has(ext)) {
+  const extOk = ALLOWED_EXTENSIONS.has(ext);
+  const mimeOk =
+    ALLOWED_MIMETYPES.has(file.mimetype) ||
+    (file.mimetype === 'application/octet-stream' && OCTET_STREAM_OK_EXTENSIONS.has(ext));
+
+  if (extOk && mimeOk) {
     cb(null, true);
   } else {
     const error = new Error(

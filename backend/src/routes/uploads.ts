@@ -6,6 +6,12 @@ import { upload } from '../middleware/upload';
 
 const router = Router();
 
+// Absolute base URL for uploaded files. Set PUBLIC_URL in production
+// (e.g. https://api.example.com); defaults to localhost in dev.
+const PUBLIC_URL =
+  process.env.PUBLIC_URL ||
+  `http://localhost:${process.env.PORT || 3001}`;
+
 // Upload a file for content (returns a URL to the saved file)
 router.post(
   '/',
@@ -21,7 +27,7 @@ router.post(
         });
       }
 
-      const url = `/uploads/${req.file.filename}`;
+      const url = `${PUBLIC_URL}/uploads/${req.file.filename}`;
       return res.status(201).json({
         success: true,
         data: {

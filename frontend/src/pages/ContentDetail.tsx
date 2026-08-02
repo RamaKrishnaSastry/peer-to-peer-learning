@@ -24,6 +24,7 @@ interface ContentDetail {
   description: string;
   type: string;
   contentUrl: string;
+  body?: string | null;
   avgRating: number;
   ratingCount: number;
   upvoteCount: number;
@@ -147,14 +148,35 @@ export const ContentDetailPage = () => {
               </div>
               <p className="text-gray-700 whitespace-pre-wrap mb-4">{content.description}</p>
 
-              <a
-                href={content.contentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 mb-4"
-              >
-                Open resource ↗
-              </a>
+              {content.type === "article" ? (
+                <div className="prose prose-sm max-w-none mb-6 whitespace-pre-wrap border border-gray-100 bg-gray-50 rounded-lg p-5">
+                  {content.body}
+                </div>
+              ) : (
+                <a
+                  href={content.contentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 mb-4"
+                >
+                  Open resource ↗
+                </a>
+              )}
+
+              {content.type === "image" && (
+                <a
+                  href={content.contentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mb-4"
+                >
+                  <img
+                    src={content.contentUrl}
+                    alt={content.title}
+                    className="max-h-96 w-auto rounded border border-gray-200"
+                  />
+                </a>
+              )}
 
               {videoId && (
                 <div className="aspect-video mb-4">

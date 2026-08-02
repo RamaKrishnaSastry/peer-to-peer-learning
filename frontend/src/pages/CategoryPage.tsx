@@ -3,7 +3,7 @@ import { useFetch } from "../hooks/useFetch";
 import { API_ENDPOINTS } from "../utils/constants";
 import { Loading } from "../components/Loading";
 import { Avatar } from "../components/Avatar";
-import { getTimeAgo, getYouTubeThumbnail } from "../utils/helpers";
+import { getTimeAgo, getContentThumbnail } from "../utils/helpers";
 
 interface CategoryNode {
   id: number;
@@ -135,7 +135,7 @@ export const CategoryPage = () => {
                 {leafContent && leafContent.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {leafContent.map((item) => {
-                      const thumb = getYouTubeThumbnail(item.contentUrl);
+                      const thumb = getContentThumbnail(item.contentUrl, item.type);
                       return (
                         <Link
                           key={item.id}

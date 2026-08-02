@@ -65,3 +65,18 @@ export const getYouTubeThumbnail = (url: string): string | null => {
   const id = extractYouTubeId(url);
   return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
 };
+
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp)(\?.*)?$/i;
+
+export const isImageUrl = (url: string): boolean => IMAGE_EXTENSIONS.test(url);
+
+// Returns a thumbnail for content: YouTube thumb for videos, the file itself
+// for images, otherwise null (caller falls back to the generic icon).
+export const getContentThumbnail = (
+  url: string,
+  type: string,
+): string | null => {
+  if (type === 'image') return isImageUrl(url) ? url : null;
+  if (type === 'video') return getYouTubeThumbnail(url);
+  return null;
+};

@@ -10,7 +10,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **#3 Forgot-password flow** — OTP-based reset routes + Login page link + reset UI.
 - [x] **#4 In-app notifications** — `Notification` model, triggers (answer/comment), bell + unread count, notifications page. Email/push later (needs a provider).
 - [x] **#5 Leaderboard** — `GET /api/leaderboard` (reputation + streak, domain filter) + page with tabs and medals.
-- [x] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically (swap to R2/S3 in prod).
+- [x] **#6 File upload for content** — multer multipart upload → local `uploads/` served statically; returns absolute URL via `PUBLIC_URL` (required in prod). **Follow-up:** swap to R2/S3 for durable storage (deploy platforms have ephemeral filesystems).
 - [x] **#7 Reporting/moderation** — `Report` model + report buttons on content/discussions/comments/answers; post rate limiting.
 - [x] **#8 Discussion edit/delete** — `PUT`/`DELETE /api/discussions/:id` (starter only) + UI.
 - [ ] **#9 Follow + bookmarks** — `Follow`/`Bookmark` models, follow button on profiles, bookmark buttons, bookmarks page.

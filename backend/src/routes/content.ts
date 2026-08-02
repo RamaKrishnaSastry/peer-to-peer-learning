@@ -166,19 +166,33 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
 // Upload content
 router.post('/', writeLimiter, authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, type, contentUrl, categoryId } = req.body;
+    const { title, description, type, contentUrl, body, categoryId } = req.body;
 
-    if (!title || !description || !type || !contentUrl || !categoryId) {
+    if (!title || !description || !type || !categoryId) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
       });
     }
 
-    if (!['video', 'notes'].includes(type)) {
+    if (!['video', 'notes', 'article', 'image'].includes(type)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid content type',
+      });
+    }
+
+    if (type === 'article' && !body) {
+      return res.status(400).json({
+        success: false,
+        error: 'Article content (body) is required for text content',
+      });
+    }
+
+    if (type !== 'article' && !contentUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'A link or uploaded file is required',
       });
     }
 
@@ -197,7 +211,8 @@ router.post('/', writeLimiter, authMiddleware, async (req: AuthRequest, res: Res
         title,
         description,
         type,
-        contentUrl,
+        contentUrl: contentUrl ?? '',
+        body: type === 'article' ? body : null,
       },
     });
 
@@ -236,14 +251,15 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { title, description, contentUrl } = req.body;
+    const { title, description, contentUrl, body } = req.body;
 
     const updated = await prisma.content.update({
       where: { id },
       data: {
         ...(title ? { title } : {}),
         ...(description ? { description } : {}),
-        ...(contentUrl ? { contentUrl } : {}),
+        ...(contentUrl !== undefined ? { contentUrl } : {}),
+        ...(body !== undefined ? { body } : {}),
         version: { increment: 1 },
       },
     });

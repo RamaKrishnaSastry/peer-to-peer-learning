@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePaginatedList } from "../hooks/usePaginatedList";
 import api from "../utils/api";
 import { API_ENDPOINTS, CONTENT_TYPES } from "../utils/constants";
-import { getErrorMessage, getYouTubeThumbnail } from "../utils/helpers";
+import { getErrorMessage, getContentThumbnail } from "../utils/helpers";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
 import { CategorySelect } from "../components/CategorySelect";
@@ -16,6 +16,7 @@ interface ContentItem {
   description: string;
   type: string;
   contentUrl: string;
+  body?: string | null;
   avgRating: number;
   ratingCount: number;
   upvoteCount: number;
@@ -35,6 +36,7 @@ export const ContentPage = () => {
   const [type, setType] = useState<string>(CONTENT_TYPES.VIDEO);
   const [contentUrl, setContentUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [body, setBody] = useState("");
   const [newCategoryId, setNewCategoryId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -80,7 +82,8 @@ export const ContentPage = () => {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description || !newCategoryId) return;
-    if (!contentUrl && !file) return;
+    if (type === CONTENT_TYPES.ARTICLE && !body.trim()) return;
+    if (type !== CONTENT_TYPES.ARTICLE && !contentUrl && !file) return;
     setSubmitting(true);
     setError("");
     setSuccess(false);
@@ -98,13 +101,15 @@ export const ContentPage = () => {
         title,
         description,
         type,
-        contentUrl: finalUrl,
+        contentUrl: type === CONTENT_TYPES.ARTICLE ? "" : finalUrl,
+        body: type === CONTENT_TYPES.ARTICLE ? body : undefined,
         categoryId: parseInt(newCategoryId),
       });
       setTitle("");
       setDescription("");
       setContentUrl("");
       setFile(null);
+      setBody("");
       setNewCategoryId("");
       setShowForm(false);
       setSuccess(true);
@@ -195,7 +200,9 @@ export const ContentPage = () => {
                   className="w-full border border-gray-300 rounded px-4 py-2"
                 >
                   <option value={CONTENT_TYPES.VIDEO}>Video</option>
-                  <option value={CONTENT_TYPES.NOTES}>Notes</option>
+                  <option value={CONTENT_TYPES.NOTES}>Notes (link or file)</option>
+                  <option value={CONTENT_TYPES.ARTICLE}>Text (article)</option>
+                  <option value={CONTENT_TYPES.IMAGE}>Image</option>
                 </select>
               </div>
               <div>
@@ -203,40 +210,60 @@ export const ContentPage = () => {
                 <CategorySelect value={newCategoryId} onChange={setNewCategoryId} className="flex-col" domain={domain} />
               </div>
             </div>
-            <div>
-              <label className="block text-gray-700 mb-2">
-                Link {type === CONTENT_TYPES.VIDEO ? "(YouTube)" : "(Drive/other)"}
-              </label>
-              <input
-                type="url"
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                className="w-full border border-gray-300 rounded px-4 py-2"
-                placeholder="https://..."
-              />
-            </div>
-            <div className="border-t border-gray-100 pt-4">
-              <label className="block text-gray-700 mb-2">
-                Or upload a file {type === CONTENT_TYPES.VIDEO ? "" : "(PDF, docs, slides, images — max 25 MB)"}
-              </label>
-              <input
-                type="file"
-                onChange={(e) => {
-                  const picked = e.target.files?.[0] ?? null;
-                  setFile(picked);
-                  if (picked) setContentUrl("");
-                }}
-                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-              />
-              {file && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+
+            {type === CONTENT_TYPES.ARTICLE ? (
+              <div>
+                <label className="block text-gray-700 mb-2">Content</label>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  required
+                  rows={8}
+                  className="w-full border border-gray-300 rounded px-4 py-2 font-mono text-sm"
+                  placeholder="Write your full explanation or study notes here. Plain text or Markdown..."
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  This text is rendered directly on the content page.
                 </p>
-              )}
-              <p className="text-xs text-gray-400 mt-1">
-                Provide either a link or a file.
-              </p>
-            </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-gray-700 mb-2">
+                    Link {type === CONTENT_TYPES.VIDEO ? "(YouTube)" : type === CONTENT_TYPES.IMAGE ? "(image URL)" : "(Drive/other)"}
+                  </label>
+                  <input
+                    type="url"
+                    value={contentUrl}
+                    onChange={(e) => setContentUrl(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="border-t border-gray-100 pt-4">
+                  <label className="block text-gray-700 mb-2">
+                    Or upload a file {type === CONTENT_TYPES.VIDEO ? "" : "(PDF, docs, slides, images — max 25 MB)"}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const picked = e.target.files?.[0] ?? null;
+                      setFile(picked);
+                      if (picked) setContentUrl("");
+                    }}
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  {file && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    Provide either a link or a file.
+                  </p>
+                </div>
+              </>
+            )}
             <button
               type="submit"
               disabled={submitting}
@@ -251,7 +278,7 @@ export const ContentPage = () => {
       <Loading isLoading={isLoading}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {content?.map((item) => {
-            const thumb = getYouTubeThumbnail(item.contentUrl);
+            const thumb = getContentThumbnail(item.contentUrl, item.type);
             return (
               <Link
                 key={item.id}

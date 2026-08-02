@@ -7,6 +7,8 @@ export const DOMAINS = {
 export const CONTENT_TYPES = {
   VIDEO: 'video',
   NOTES: 'notes',
+  ARTICLE: 'article',
+  IMAGE: 'image',
 } as const;
 
 export const API_ENDPOINTS = {

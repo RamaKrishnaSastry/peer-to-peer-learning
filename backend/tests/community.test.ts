@@ -361,9 +361,9 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
         contentType: 'text/plain',
       });
     expect(up.status).toBe(201);
-    expect(up.body.data.url).toMatch(/^\/uploads\//);
+    expect(up.body.data.url).toMatch(/^http:\/\/localhost:3001\/uploads\//);
 
-    const fileRes = await request(app).get(up.body.data.url);
+    const fileRes = await request(app).get(up.body.data.url.replace(/^http:\/\/localhost:3001/, ''));
     expect(fileRes.status).toBe(200);
     expect(fileRes.text).toContain('hello upload');
 
@@ -373,8 +373,60 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
       .attach('file', Buffer.from('x'), { filename: 'evil.exe', contentType: 'application/octet-stream' });
     expect(badExt.status).toBe(400);
 
+    const spoofedMime = await request(app)
+      .post('/api/uploads')
+      .set(uploaderAuth)
+      .attach('file', Buffer.from('x'), {
+        filename: 'fake.pdf',
+        contentType: 'application/octet-stream',
+      });
+    expect(spoofedMime.status).toBe(400);
+
     const noFile = await request(app).post('/api/uploads').set(uploaderAuth);
     expect(noFile.status).toBe(400);
+  });
+
+  test('article and image content types can be created', async () => {
+    const creator = await signupAndGetToken(app, 'articleuser');
+    const creatorAuth = { Authorization: `Bearer ${creator}` };
+
+    const article = await request(app)
+      .post('/api/content')
+      .set(creatorAuth)
+      .send({
+        title: 'RBI Monetary Policy Explained',
+        description: 'A full text guide',
+        type: 'article',
+        body: 'The RBI uses repo rate, CRR, and SLR to manage liquidity.',
+        categoryId,
+      });
+    expect(article.status).toBe(201);
+    expect(article.body.data.type).toBe('article');
+    expect(article.body.data.body).toContain('repo rate');
+
+    const missingBody = await request(app)
+      .post('/api/content')
+      .set(creatorAuth)
+      .send({
+        title: 'Broken article',
+        description: 'No body',
+        type: 'article',
+        categoryId,
+      });
+    expect(missingBody.status).toBe(400);
+
+    const image = await request(app)
+      .post('/api/content')
+      .set(creatorAuth)
+      .send({
+        title: 'Map of India rivers',
+        description: 'Diagram',
+        type: 'image',
+        contentUrl: 'http://localhost:3001/uploads/map.png',
+        categoryId,
+      });
+    expect(image.status).toBe(201);
+    expect(image.body.data.type).toBe('image');
   });
 
   test('discussion starter can edit and delete; others cannot', async () => {

@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from "../utils/constants";
 import { useAuth } from "../contexts/AuthContext";
 import { Loading } from "../components/Loading";
 import { Avatar } from "../components/Avatar";
-import { getTimeAgo, getYouTubeThumbnail } from "../utils/helpers";
+import { getTimeAgo, getContentThumbnail } from "../utils/helpers";
 
 interface SearchResult {
   content: {
@@ -89,7 +89,7 @@ export const SearchPage = () => {
                   <h2 className="text-xl font-bold mb-4">Content</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {data.content.map((item) => {
-                      const thumb = getYouTubeThumbnail(item.contentUrl);
+                      const thumb = getContentThumbnail(item.contentUrl, item.type);
                       return (
                         <Link
                           key={item.id}
