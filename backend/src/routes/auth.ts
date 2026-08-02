@@ -338,6 +338,55 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Change password while logged in (verifies the current password).
+router.post(
+  '/change-password',
+  authLimiter,
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Current and new password are required',
+        });
+      }
+
+      if (!validatePassword(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          error: 'New password must be at least 8 characters',
+        });
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: req.userId } });
+      if (!user || !(await comparePasswords(currentPassword, user.password))) {
+        return res.status(401).json({
+          success: false,
+          error: 'Current password is incorrect',
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: await hashPassword(newPassword) },
+      });
+
+      return res.json({
+        success: true,
+        message: 'Password changed successfully',
+      });
+    } catch (error: any) {
+      return res.status(error.status || 500).json({
+        success: false,
+        error: error.message || 'Failed to change password',
+      });
+    }
+  },
+);
+
 // Get current user with stats
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

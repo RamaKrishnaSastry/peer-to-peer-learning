@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from "../utils/constants";
 import { useAuth } from "../contexts/AuthContext";
 import { Avatar } from "../components/Avatar";
 import { Loading } from "../components/Loading";
-import { formatDate, getTimeAgo } from "../utils/helpers";
+import { formatDate, getTimeAgo, getLevelInfo } from "../utils/helpers";
 
 interface UserProfile {
   id: string;
@@ -12,6 +12,7 @@ interface UserProfile {
   bio: string | null;
   avatarUrl: string | null;
   verified: boolean;
+  domain?: string | null;
   createdAt: string;
   stats: {
     reputationScore: number;
@@ -67,21 +68,34 @@ export const UserProfilePage = () => {
   );
 
   const isMe = me?.username === username;
+  const level = profile ? getLevelInfo(profile.stats.reputationScore) : null;
 
   return (
     <div className="max-w-4xl mx-auto py-8">
       <Loading isLoading={isLoading}>
-        {profile ? (
+        {profile && level ? (
           <>
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm mb-6">
               <div className="flex items-start gap-6">
-                <Avatar name={profile.username} className="w-20 h-20 text-3xl" />
+                <Avatar
+                  name={profile.username}
+                  avatarUrl={profile.avatarUrl}
+                  className="w-20 h-20 text-3xl"
+                />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-2xl font-bold">{profile.username}</h1>
                     {profile.verified && (
                       <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded uppercase">
                         Verified
+                      </span>
+                    )}
+                    <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded uppercase">
+                      Level {level.level} · {level.title}
+                    </span>
+                    {profile.domain && (
+                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase">
+                        🎯 {profile.domain}
                       </span>
                     )}
                     {isMe && (
@@ -101,6 +115,16 @@ export const UserProfilePage = () => {
                   )}
                 </div>
               </div>
+
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-5">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                  style={{ width: `${level.progressPct}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Reputation {level.currentRep} / {level.next} (Level {level.level})
+              </p>
 
               {profile.badges.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-6">

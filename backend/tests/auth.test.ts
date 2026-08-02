@@ -317,4 +317,84 @@ describe('Auth (register via OTP + password, login with password)', () => {
     expect(reset.status).toBe(400);
     expect(reset.body.error).toBe('Password must be at least 8 characters');
   });
+
+  test('change-password verifies current password then updates', async () => {
+    const email = uniqueEmail('changepw');
+    const registered = await registerWithOtp(email);
+    const token = registered.body.data.token;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // Wrong current password is rejected.
+    const wrong = await request(app)
+      .post('/api/auth/change-password')
+      .set(auth)
+      .send({ currentPassword: 'wrongpass123', newPassword: 'BrandNewPass123' });
+    expect(wrong.status).toBe(401);
+    expect(wrong.body.error).toBe('Current password is incorrect');
+
+    // Short new password is rejected.
+    const short = await request(app)
+      .post('/api/auth/change-password')
+      .set(auth)
+      .send({ currentPassword: TEST_PASSWORD, newPassword: 'short' });
+    expect(short.status).toBe(400);
+
+    // Valid change succeeds; old password no longer logs in, new one does.
+    const ok = await request(app)
+      .post('/api/auth/change-password')
+      .set(auth)
+      .send({ currentPassword: TEST_PASSWORD, newPassword: 'BrandNewPass123' });
+    expect(ok.status).toBe(200);
+
+    const oldLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: TEST_PASSWORD });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'BrandNewPass123' });
+    expect(newLogin.status).toBe(200);
+  });
+
+  test('change-password requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .send({ currentPassword: TEST_PASSWORD, newPassword: 'BrandNewPass123' });
+    expect(res.status).toBe(401);
+  });
+
+  test('delete account requires the current password and removes the user', async () => {
+    const email = uniqueEmail('delete_me');
+    const registered = await registerWithOtp(email);
+    const token = registered.body.data.token;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // A wrong password is rejected.
+    const wrong = await request(app)
+      .delete('/api/users/me')
+      .set(auth)
+      .send({ password: 'wrongpass123' });
+    expect(wrong.status).toBe(401);
+
+    // Missing password is rejected.
+    const missing = await request(app).delete('/api/users/me').set(auth).send({});
+    expect(missing.status).toBe(400);
+
+    // Correct password deletes the account.
+    const ok = await request(app)
+      .delete('/api/users/me')
+      .set(auth)
+      .send({ password: TEST_PASSWORD });
+    expect(ok.status).toBe(200);
+
+    // The token no longer works after deletion.
+    const me = await request(app).get('/api/auth/me').set(auth);
+    expect(me.status).toBe(401);
+
+    // The email can be re-registered afterwards.
+    await new Promise((r) => setTimeout(r, 1100));
+    const reRegistered = await registerWithOtp(email);
+    expect(reRegistered.status).toBe(200);
+  });
 });

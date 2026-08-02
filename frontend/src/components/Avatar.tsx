@@ -19,10 +19,20 @@ export const avatarColorFor = (name: string): string => {
 
 interface AvatarProps {
   name: string;
+  avatarUrl?: string | null;
   className?: string;
 }
 
-export const Avatar = ({ name, className = "w-10 h-10 text-sm" }: AvatarProps) => {
+export const Avatar = ({ name, avatarUrl, className = "w-10 h-10 text-sm" }: AvatarProps) => {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        className={`rounded-full object-cover shrink-0 ${className}`}
+      />
+    );
+  }
   return (
     <div
       className={`rounded-full text-white font-bold flex items-center justify-center shrink-0 ${avatarColorFor(name)} ${className}`}

@@ -80,3 +80,47 @@ export const getContentThumbnail = (
   if (type === 'video') return getYouTubeThumbnail(url);
   return null;
 };
+
+export interface LevelInfo {
+  level: number;
+  title: string;
+  currentRep: number;
+  base: number;
+  next: number;
+  progressPct: number;
+}
+
+const LEVEL_TITLES = [
+  'Beginner',
+  'Learner',
+  'Scholar',
+  'Mentor',
+  'Expert',
+  'Master',
+  'Champion',
+  'Grandmaster',
+];
+
+// Level grows with reputation (each level requires +100 more than the last),
+// giving learners a visible sense of progress tied to their score.
+export const getLevelInfo = (reputation: number): LevelInfo => {
+  let level = 1;
+  let base = 0;
+  let next = 100;
+  while (reputation >= next && level < LEVEL_TITLES.length) {
+    base = next;
+    level += 1;
+    next = base + 100 * level;
+  }
+  const span = next - base;
+  const progressPct =
+    span > 0 ? Math.min(100, ((reputation - base) / span) * 100) : 100;
+  return {
+    level,
+    title: LEVEL_TITLES[level - 1],
+    currentRep: reputation,
+    base,
+    next,
+    progressPct,
+  };
+};

@@ -475,4 +475,35 @@ describe('Community: Content, Discussions, Answers, Upvotes', () => {
     const gone = await request(app).get(`/api/discussions/${discussionId}`);
     expect(gone.status).toBe(404);
   });
+
+  test('user activity feed returns recent content/discussion/answer events', async () => {
+    const owner = await signupAndGetToken(app, 'activityuser');
+    const ownerAuth = { Authorization: `Bearer ${owner}` };
+    const username = (await request(app).get('/api/auth/me').set(ownerAuth)).body.data.username;
+
+    await request(app)
+      .post('/api/content')
+      .set(ownerAuth)
+      .send({
+        title: 'Activity notes',
+        description: 'desc',
+        type: 'notes',
+        contentUrl: 'https://example.com/activity.pdf',
+        categoryId,
+      });
+    const discussion = await request(app)
+      .post('/api/discussions')
+      .set(ownerAuth)
+      .send({ title: 'Activity thread', description: 'desc', categoryId });
+    await request(app)
+      .post(`/api/discussions/${discussion.body.data.id}/answers`)
+      .set(ownerAuth)
+      .send({ text: 'A helpful answer for the feed.' });
+
+    const activity = await request(app).get(`/api/users/${username}/activity`);
+    expect(activity.status).toBe(200);
+    const kinds = activity.body.data.map((e: any) => e.kind);
+    expect(kinds).toEqual(expect.arrayContaining(['content', 'discussion', 'answer']));
+    expect(activity.body.data.length).toBeGreaterThanOrEqual(3);
+  });
 });

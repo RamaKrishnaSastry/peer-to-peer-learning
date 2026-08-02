@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
     ME: '/auth/me',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    CHANGE_PASSWORD: '/auth/change-password',
   },
   CATEGORIES: {
     LIST: '/categories',
@@ -76,8 +77,10 @@ export const API_ENDPOINTS = {
     GET_PROFILE: (username: string) => `/users/${username}`,
     GET_ME: '/users/me',
     UPDATE_ME: '/users/me',
+    DELETE_ME: '/users/me',
     GET_CONTENT: (username: string) => `/users/${username}/content`,
     GET_ANSWERS: (username: string) => `/users/${username}/answers`,
+    GET_ACTIVITY: (username: string) => `/users/${username}/activity`,
   },
 } as const;
 
